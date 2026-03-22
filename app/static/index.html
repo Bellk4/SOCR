@@ -135,6 +135,8 @@
 
 			.content-area {
 				flex: 1;
+				min-width: 0;
+				min-height: 0;
 				display: flex;
 				flex-direction: column;
 				padding: 8px;
@@ -143,6 +145,8 @@
 
 			.viewer-panel {
 				flex: 1;
+				min-width: 0;
+				min-height: 0;
 				background: #808080;
 				border: 1px solid var(--panel-border);
 				border-radius: 4px;
@@ -150,6 +154,7 @@
 				align-items: center;
 				justify-content: center;
 				position: relative;
+				overflow: hidden;
 				margin-bottom: 8px;
 			}
 
@@ -529,10 +534,13 @@
 			.pdf-preview-container {
 				width: 100%;
 				height: 100%;
+				min-width: 0;
+				min-height: 0;
 				display: flex;
 				flex-direction: column;
 				padding: 16px;
 				box-sizing: border-box;
+				overflow: hidden;
 			}
 
 			.pdf-controls {
@@ -574,14 +582,17 @@
 
 			.pdf-canvas-container {
 				flex: 1;
+				min-width: 0;
+				min-height: 0;
 				display: flex;
-				justify-content: center;
-				align-items: center;
+				justify-content: flex-start;
+				align-items: flex-start;
 				overflow: auto;
 				background: #f8f8f8;
 				border: 1px solid var(--panel-border);
 				border-radius: 4px;
 				position: relative;
+				padding: 16px;
 			}
 
 			.pdf-canvas {
@@ -628,9 +639,8 @@
 				</div>
 				
 				<div class="toolbar-group">
-					<button class="toolbar-btn">←</button>
-					<button class="toolbar-btn">→</button>
-					<button class="toolbar-btn">-</button>
+					<button class="toolbar-btn" id="prevPageBtn">←</button>
+					<button class="toolbar-btn" id="nextPageBtn">→</button>
 				</div>
 				
 				<div class="toolbar-group zoom-control">
@@ -702,10 +712,6 @@
 					
 					<!-- Text Results -->
 					<div class="result-section">
-						<div class="result-header">
-							<div class="result-label">No.</div>
-							<div class="result-label">Text</div>
-						</div>
 						<div class="result-output" id="textResult">
 							OCR実行後にここで結果を表示します
 						</div>
@@ -1041,6 +1047,11 @@
 			const clearBtn = document.getElementById("clearBtn");
 			const clearResultBtn = document.getElementById("clearResultBtn");
 			const clearSelectionBtn = document.getElementById("clearSelectionBtn");
+			const prevPageBtn = document.getElementById("prevPageBtn");
+			const nextPageBtn = document.getElementById("nextPageBtn");
+			const zoomOutBtn = document.getElementById("zoomOut");
+			const zoomInBtn = document.getElementById("zoomIn");
+			const fitBtn = document.getElementById("fitBtn");
 			const copyBtn = document.getElementById("copyBtn");
 			const statusIndicator = document.getElementById("statusIndicator");
 			const fileInput = document.getElementById("file");
@@ -1077,6 +1088,7 @@
 
 			// State variables
 			let currentResults = [];
+			let resultHistory = [];
 			let progressPollTimer = null;
 			let activeRequestId = null;
 			let currentViewItem = null;
@@ -1342,7 +1354,7 @@
 
 			function setError(message) {
 				resetCopyState();
-				textResult.textContent = `エラー: ${message}`;
+				pushResultHistory(`エラー: ${message}`, "ERROR");
 				// エラー後もファイルが選択されている場合はプレビューを復元
 				if (fileInput && fileInput.files && fileInput.files.length > 0) {
 					updateViewerPreview(fileInput.files[0]);
@@ -1364,7 +1376,6 @@
 
 			function renderLoading(message = "解析中... しばらくお待ちください。") {
 				resetCopyState();
-				textResult.textContent = message;
 				// 処理中でもファイルプレビューは維持（処理中オーバーレイを追加）
 				if (fileInput && fileInput.files && fileInput.files.length > 0) {
 					const currentViewerContent = viewerPanel.innerHTML;
@@ -1421,7 +1432,6 @@
 			}
 
 			function updateLoading(message) {
-				textResult.textContent = message;
 				const pre = document.getElementById("loadingText");
 				if (pre) {
 					pre.textContent = message;
@@ -1441,6 +1451,41 @@
 				}
 				
 				// プレビューの復元はOCR完了後に明示的に行う（無限ループ防止）
+			}
+
+			function renderResultHistory() {
+				if (!textResult) return;
+				if (resultHistory.length === 0) {
+					textResult.textContent = "OCR実行後にここで結果を表示します";
+					return;
+				}
+
+				textResult.innerHTML = "";
+				resultHistory.forEach((entry) => {
+					const card = document.createElement("div");
+					card.style.cssText = "background:#fff;border:1px solid #d0d0d0;border-radius:4px;padding:8px;margin-bottom:8px;";
+
+					const title = document.createElement("div");
+					title.style.cssText = "font-size:11px;color:#666;margin-bottom:6px;";
+					title.textContent = entry.label;
+
+					const body = document.createElement("pre");
+					body.style.cssText = "margin:0;font-family:var(--mono);font-size:11px;white-space:pre-wrap;word-break:break-word;";
+					body.textContent = entry.text || "結果なし";
+
+					card.appendChild(title);
+					card.appendChild(body);
+					textResult.appendChild(card);
+				});
+			}
+
+			function pushResultHistory(text, label) {
+				const stamp = new Date().toLocaleTimeString();
+				resultHistory.unshift({ text: text || "", label: `${label} ${stamp}` });
+				if (resultHistory.length > 5) {
+					resultHistory = resultHistory.slice(0, 5);
+				}
+				renderResultHistory();
 			}
 
 			function createRequestId() {
@@ -1593,9 +1638,6 @@
 				}
 				copyBtn.textContent = "結果をコピー";
 
-				// Update main text display
-				textResult.textContent = item.text || "結果なし";
-
 				// Update hidden resultBody for compatibility
 				if (resultBody) {
 					resultBody.innerHTML = "";
@@ -1651,11 +1693,15 @@
 				renderResultItem(item, "text", "json", `Page ${item.page}`);
 			}
 
-			function renderAllPages() {
+			function renderAllPages(addToHistory = false) {
 				if (resultOrder) {
 					resultOrder.textContent = `order: ${currentMeta.readingOrder || "-"}`;
 				}
-				renderResultItem(combineAllPages(currentResults), "text (ALL)", "json (ALL)", "ALL");
+				const combined = combineAllPages(currentResults);
+				renderResultItem(combined, "text (ALL)", "json (ALL)", "ALL");
+				if (addToHistory) {
+					pushResultHistory(combined.text || "結果なし", "OCR");
+				}
 			}
 
 			function buildCopyText(item, label) {
@@ -1743,7 +1789,8 @@
 			}
 
 			function clearResults() {
-				textResult.textContent = "OCR実行後にここで結果を表示します";
+				resultHistory = [];
+				renderResultHistory();
 				// ファイルが選択されている場合は、プレビューを復元
 				if (fileInput && fileInput.files && fileInput.files.length > 0) {
 					updateViewerPreview(fileInput.files[0]);
@@ -1789,6 +1836,31 @@
 				pdfState.selectionRect = null;
 				pdfState.isSelecting = false;
 				pdfState.renderingPage = false;
+				updatePDFControls();
+			}
+
+			function showPreviousPdfPage() {
+				if (!pdfState.pdfDoc || pdfState.renderingPage || pdfState.currentPage <= 1) return;
+				pdfState.currentPage -= 1;
+				renderPDFPage(pdfState.currentPage);
+			}
+
+			function showNextPdfPage() {
+				if (!pdfState.pdfDoc || pdfState.renderingPage || pdfState.currentPage >= pdfState.totalPages) return;
+				pdfState.currentPage += 1;
+				renderPDFPage(pdfState.currentPage);
+			}
+
+			function zoomPdfOut() {
+				if (!pdfState.pdfDoc || pdfState.renderingPage) return;
+				pdfState.scale = Math.max(0.5, pdfState.scale - 0.1);
+				renderPDFPage(pdfState.currentPage);
+			}
+
+			function zoomPdfIn() {
+				if (!pdfState.pdfDoc || pdfState.renderingPage) return;
+				pdfState.scale = Math.min(3.0, pdfState.scale + 0.1);
+				renderPDFPage(pdfState.currentPage);
 			}
 
 			// Image Selection Functions
@@ -2094,7 +2166,7 @@
 						}
 					} else {
 						renderPageSelector(currentResults);
-						renderAllPages();
+						renderAllPages(true);
 					}
 					
 					if (payload.state === "canceled") {
@@ -2142,6 +2214,29 @@
 				}
 				renderPage(index);
 			});
+
+			if (prevPageBtn) {
+				prevPageBtn.addEventListener("click", showPreviousPdfPage);
+			}
+
+			if (nextPageBtn) {
+				nextPageBtn.addEventListener("click", showNextPdfPage);
+			}
+
+			if (zoomOutBtn) {
+				zoomOutBtn.addEventListener("click", zoomPdfOut);
+			}
+
+			if (zoomInBtn) {
+				zoomInBtn.addEventListener("click", zoomPdfIn);
+			}
+
+			if (fitBtn) {
+				fitBtn.addEventListener("click", () => {
+					if (!pdfState.pdfDoc || pdfState.renderingPage) return;
+					fitPDFToContainer();
+				});
+			}
 
 			taskInput.addEventListener("change", toggleSchema);
 			useLayoutInput.addEventListener("change", toggleLayoutOptions);
@@ -2196,6 +2291,7 @@
 			
 			toggleSchema();
 			toggleLayoutOptions();
+			updatePDFControls();
 			setupHelpBubbles();
 			setupFileDropzone();
 			fetchStatus();
@@ -2273,23 +2369,9 @@
 			function setupPDFPreviewUI(fileName, fileSize) {
 				viewerPanel.innerHTML = `
 					<div class="pdf-preview-container">
-						<div class="pdf-controls">
-							<button id="pdfPrevPageBtn" ${pdfState.currentPage <= 1 ? 'disabled' : ''} title="前のページ（左矢印キー）">&larr;</button>
-							<span class="pdf-page-info">
-								<span id="pdfCurrentPage">${pdfState.currentPage}</span> / <span id="pdfTotalPages">${pdfState.totalPages}</span>
-							</span>
-							<button id="pdfNextPageBtn" ${pdfState.currentPage >= pdfState.totalPages ? 'disabled' : ''} title="次のページ（右矢印キー）">&rarr;</button>
-							<span style="margin-left: 16px;"></span>
-							<button id="pdfZoomOutBtn" ${pdfState.scale <= 0.5 ? 'disabled' : ''} title="縮小（Ctrl + -）">-</button>
-							<span class="pdf-page-info">
-								<span id="pdfZoomLevel">${Math.round(pdfState.scale * 100)}%</span>
-							</span>
-							<button id="pdfZoomInBtn" ${pdfState.scale >= 3.0 ? 'disabled' : ''} title="拡大（Ctrl + +）">+</button>
-							<button id="pdfFitBtn" style="margin-left: 8px;" title="画面に合わせる">Fit</button>
-						</div>
 						<div class="pdf-canvas-container">
 							<div style="position: relative; display: inline-block;">
-								<img id="previewImage" alt="PDFプレビュー" style="max-width: 100%; max-height: 100%; object-fit: contain; border: 1px solid #ddd; border-radius: 4px; display: block;" />
+								<img id="previewImage" alt="PDFプレビュー" style="border: 1px solid #ddd; border-radius: 4px; display: block;" />
 								<canvas id="selectionCanvas" style="position: absolute; top: 0; left: 0; cursor: crosshair; pointer-events: all;" width="0" height="0"></canvas>
 							</div>
 						</div>
@@ -2301,56 +2383,6 @@
 			}
 
 			function setupPDFEventListeners() {
-				const prevBtn = document.getElementById('pdfPrevPageBtn');
-				const nextBtn = document.getElementById('pdfNextPageBtn');
-				const zoomOutBtn = document.getElementById('pdfZoomOutBtn');
-				const zoomInBtn = document.getElementById('pdfZoomInBtn');
-				const fitBtn = document.getElementById('pdfFitBtn');
-
-				if (prevBtn) {
-					prevBtn.addEventListener('click', () => {
-						if (pdfState.currentPage > 1 && !pdfState.renderingPage) {
-							pdfState.currentPage--;
-							renderPDFPage(pdfState.currentPage);
-						}
-					});
-				}
-
-				if (nextBtn) {
-					nextBtn.addEventListener('click', () => {
-						if (pdfState.currentPage < pdfState.totalPages && !pdfState.renderingPage) {
-							pdfState.currentPage++;
-							renderPDFPage(pdfState.currentPage);
-						}
-					});
-				}
-
-				if (zoomOutBtn) {
-					zoomOutBtn.addEventListener('click', () => {
-						if (!pdfState.renderingPage) {
-							pdfState.scale = Math.max(0.5, pdfState.scale - 0.1);
-							renderPDFPage(pdfState.currentPage);
-						}
-					});
-				}
-
-				if (zoomInBtn) {
-					zoomInBtn.addEventListener('click', () => {
-						if (!pdfState.renderingPage) {
-							pdfState.scale = Math.min(3.0, pdfState.scale + 0.1);
-							renderPDFPage(pdfState.currentPage);
-						}
-					});
-				}
-
-				if (fitBtn) {
-					fitBtn.addEventListener('click', () => {
-						if (!pdfState.renderingPage) {
-							fitPDFToContainer();
-						}
-					});
-				}
-
 				// キーボードショートカット
 				document.addEventListener('keydown', handlePDFKeydown);
 
@@ -2397,6 +2429,7 @@
 				if (!pdfState.pdfDoc || pdfState.isLoading || pdfState.renderingPage) return;
 
 				pdfState.renderingPage = true;
+				updatePDFControls();
 
 				try {
 					const previewImage = document.getElementById('previewImage');
@@ -2427,6 +2460,8 @@
 
 					pdfState.pageWidth = baseViewport.width;
 					pdfState.pageHeight = baseViewport.height;
+					previewImage.style.width = `${viewport.width}px`;
+					previewImage.style.height = `${viewport.height}px`;
 					previewImage.src = renderCanvas.toDataURL('image/png');
 					setupImageSelection();
 					
@@ -2440,9 +2475,6 @@
 						clearSelectionBtn.style.display = 'none';
 					}
 					
-					// UIを更新
-					updatePDFControls();
-					
 				} catch (error) {
 					console.error('PDFページレンダリングエラー:', error);
 					const previewImage = document.getElementById('previewImage');
@@ -2452,23 +2484,19 @@
 					}
 				} finally {
 					pdfState.renderingPage = false;
+					updatePDFControls();
 				}
 			}
 
 			function updatePDFControls() {
-				const currentPageSpan = document.getElementById('pdfCurrentPage');
-				const prevBtn = document.getElementById('pdfPrevPageBtn');
-				const nextBtn = document.getElementById('pdfNextPageBtn');
-				const zoomLevel = document.getElementById('pdfZoomLevel');
-				const zoomOutBtn = document.getElementById('pdfZoomOutBtn');
-				const zoomInBtn = document.getElementById('pdfZoomInBtn');
-
-				if (currentPageSpan) currentPageSpan.textContent = pdfState.currentPage;
-				if (prevBtn) prevBtn.disabled = pdfState.currentPage <= 1 || pdfState.renderingPage;
-				if (nextBtn) nextBtn.disabled = pdfState.currentPage >= pdfState.totalPages || pdfState.renderingPage;
-				if (zoomLevel) zoomLevel.textContent = `${Math.round(pdfState.scale * 100)}%`;
-				if (zoomOutBtn) zoomOutBtn.disabled = pdfState.scale <= 0.5 || pdfState.renderingPage;
-				if (zoomInBtn) zoomInBtn.disabled = pdfState.scale >= 3.0 || pdfState.renderingPage;
+				if (zoomLevel) {
+					zoomLevel.textContent = pdfState.pdfDoc ? `${Math.round(pdfState.scale * 100)}%` : '100%';
+				}
+				if (prevPageBtn) prevPageBtn.disabled = !pdfState.pdfDoc || pdfState.currentPage <= 1 || pdfState.renderingPage;
+				if (nextPageBtn) nextPageBtn.disabled = !pdfState.pdfDoc || pdfState.currentPage >= pdfState.totalPages || pdfState.renderingPage;
+				if (zoomOutBtn) zoomOutBtn.disabled = !pdfState.pdfDoc || pdfState.scale <= 0.5 || pdfState.renderingPage;
+				if (zoomInBtn) zoomInBtn.disabled = !pdfState.pdfDoc || pdfState.scale >= 3.0 || pdfState.renderingPage;
+				if (fitBtn) fitBtn.disabled = !pdfState.pdfDoc || pdfState.renderingPage;
 			}
 
 			function fitPDFToContainer() {
