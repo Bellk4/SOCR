@@ -3,7 +3,7 @@
 	<head>
 		<meta charset="UTF-8" />
 		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-		<title>GLM-OCR Local Console</title>
+		<title>PS SOCR - OCR Application</title>
 		<link rel="preconnect" href="https://fonts.googleapis.com" />
 		<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 		<link
@@ -12,16 +12,18 @@
 		/>
 		<style>
 			:root {
-				--bg-start: #fff6e8;
-				--bg-end: #ecf9f6;
-				--panel: rgba(255, 255, 255, 0.88);
-				--panel-strong: #ffffff;
-				--ink: #1f2937;
-				--muted: #556070;
-				--line: #d8e1ea;
-				--accent: #0f766e;
-				--accent-strong: #115e59;
-				--warn: #b45309;
+				--bg-color: #f5f5f5;
+				--toolbar-bg: #4a90e2;
+				--toolbar-text: #ffffff;
+				--panel: #ffffff;
+				--panel-border: #d0d0d0;
+				--button-bg: #4a90e2;
+				--button-hover: #357abd;
+				--button-disabled: #cccccc;
+				--ink: #333333;
+				--muted: #666666;
+				--accent: #4a90e2;
+				--sidebar-bg: #f9f9f9;
 				--mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
 				--sans: "M PLUS 1p", "Hiragino Kaku Gothic ProN", sans-serif;
 			}
@@ -35,124 +37,395 @@
 				min-height: 100vh;
 				font-family: var(--sans);
 				color: var(--ink);
-				background: linear-gradient(140deg, var(--bg-start) 0%, var(--bg-end) 100%);
-			}
-
-			.wrap {
-				max-width: 1180px;
-				margin: 0 auto;
-				padding: 20px 16px 32px;
-				display: grid;
-				gap: 14px;
-			}
-
-			.panel {
-				background: var(--panel);
-				backdrop-filter: blur(8px);
-				border: 1px solid var(--line);
-				border-radius: 14px;
-				box-shadow: 0 8px 30px rgba(15, 23, 42, 0.08);
-			}
-
-			.header {
-				padding: 16px 18px;
+				background: var(--bg-color);
 				display: flex;
-				flex-wrap: wrap;
-				gap: 10px;
+				flex-direction: column;
+			}
+
+			/* Toolbar Styles */
+			.toolbar {
+				background: var(--toolbar-bg);
+				padding: 8px 16px;
+				display: flex;
+				align-items: center;
+				justify-content: space-between;
+				border: none;
+				box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+			}
+
+			.toolbar-left {
+				display: flex;
+				align-items: center;
+				gap: 8px;
+			}
+
+			.toolbar-title {
+				color: var(--toolbar-text);
+				font-size: 14px;
+				font-weight: 600;
+				margin: 0 16px 0 0;
+			}
+
+			.toolbar-group {
+				display: flex;
+				align-items: center;
+				gap: 4px;
+				border-right: 1px solid rgba(255, 255, 255, 0.3);
+				padding-right: 8px;
+				margin-right: 8px;
+			}
+
+			.toolbar-group:last-child {
+				border-right: none;
+				margin-right: 0;
+			}
+
+			.toolbar-btn {
+				background: rgba(255, 255, 255, 0.1);
+				border: 1px solid rgba(255, 255, 255, 0.3);
+				color: var(--toolbar-text);
+				padding: 6px 10px;
+				border-radius: 4px;
+				font-size: 12px;
+				cursor: pointer;
+				transition: background 0.2s;
+			}
+
+			.toolbar-btn:hover {
+				background: rgba(255, 255, 255, 0.2);
+			}
+
+			.toolbar-btn:disabled {
+				opacity: 0.5;
+				cursor: not-allowed;
+			}
+
+			.toolbar-btn.primary {
+				background: #2ecc71;
+				border-color: #27ae60;
+				font-weight: 600;
+				padding: 8px 16px;
+			}
+
+			.toolbar-btn.primary:hover {
+				background: #27ae60;
+			}
+
+			.zoom-control {
+				display: flex;
+				align-items: center;
+				gap: 4px;
+			}
+
+			.zoom-display {
+				color: var(--toolbar-text);
+				font-size: 12px;
+				min-width: 50px;
+				text-align: center;
+			}
+
+			/* Main Layout */
+			.main-container {
+				display: flex;
+				flex: 1;
+				overflow: hidden;
+			}
+
+			.content-area {
+				flex: 1;
+				display: flex;
+				flex-direction: column;
+				padding: 8px;
+				background: var(--bg-color);
+			}
+
+			.viewer-panel {
+				flex: 1;
+				background: #808080;
+				border: 1px solid var(--panel-border);
+				border-radius: 4px;
+				display: flex;
+				align-items: center;
+				justify-content: center;
+				position: relative;
+				margin-bottom: 8px;
+			}
+
+			.viewer-content {
+				color: #ffffff;
+				opacity: 0.7;
+			}
+
+			/* Sidebar */
+			.sidebar {
+				width: 300px;
+				background: var(--sidebar-bg);
+				border-left: 1px solid var(--panel-border);
+				display: flex;
+				flex-direction: column;
+			}
+
+			.sidebar-header {
+				background: var(--panel);
+				padding: 12px;
+				border-bottom: 1px solid var(--panel-border);
+				font-size: 14px;
+				font-weight: 600;
+				display: flex;
 				align-items: center;
 				justify-content: space-between;
 			}
 
-			h1 {
-				margin: 0;
-				font-size: 20px;
-				letter-spacing: 0.02em;
-			}
-
-			.tag {
-				display: inline-flex;
-				align-items: center;
-				gap: 8px;
-				font-size: 12px;
-				font-family: var(--mono);
-				border: 1px solid var(--line);
-				border-radius: 999px;
-				padding: 6px 10px;
-				background: var(--panel-strong);
-				color: var(--muted);
-			}
-
-			form {
-				padding: 14px 18px 18px;
-				display: grid;
-				grid-template-columns: 1fr;
-				gap: 12px;
-			}
-
-			.form-group {
-				margin: 0;
+			.sidebar-content {
+				flex: 1;
 				padding: 12px;
-				border: 1px solid var(--line);
-				border-radius: 10px;
-				background: var(--panel-strong);
+				overflow-y: auto;
 			}
 
-			.form-group legend {
-				padding: 0 6px;
+			.result-section {
+				margin-bottom: 16px;
+			}
+
+			.result-header {
+				display: flex;
+				justify-content: space-between;
+				align-items: center;
+				margin-bottom: 8px;
+			}
+
+			.result-label {
 				font-size: 12px;
-				font-weight: 700;
 				color: var(--muted);
+				margin-bottom: 4px;
 			}
 
-			.group-grid {
+			.result-output {
+				background: var(--panel);
+				border: 1px solid var(--panel-border);
+				border-radius: 4px;
+				padding: 12px;
+				min-height: 120px;
+				font-family: var(--mono);
+				font-size: 11px;
+				line-height: 1.4;
+				white-space: pre-wrap;
+				word-break: break-word;
+				overflow-y: auto;
+				max-height: 300px;
+			}
+
+			/* Button Styles */
+			.btn {
+				border: none;
+				border-radius: 4px;
+				padding: 8px 16px;
+				font-size: 12px;
+				cursor: pointer;
+				transition: all 0.2s;
+				font-family: inherit;
+			}
+
+			.btn-primary {
+				background: var(--button-bg);
+				color: white;
+			}
+
+			.btn-primary:hover {
+				background: var(--button-hover);
+			}
+
+			.btn-secondary {
+				background: #6c757d;
+				color: white;
+			}
+
+			.btn-secondary:hover {
+				background: #545b62;
+			}
+
+			.btn-small {
+				padding: 4px 8px;
+				font-size: 10px;
+			}
+
+			.btn:disabled {
+				background: var(--button-disabled);
+				cursor: not-allowed;
+			}
+
+			/* Controls */
+			.controls {
+				display: flex;
+				gap: 8px;
+				margin-bottom: 16px;
+			}
+
+			.separator {
+				width: 1px;
+				background: var(--panel-border);
+				margin: 0 8px;
+			}
+
+			/* Page Selector */
+			.page-selector {
+				margin-bottom: 16px;
+			}
+
+			.page-selector select {
+				width: 100%;
+				padding: 6px;
+				border: 1px solid var(--panel-border);
+				border-radius: 4px;
+				font-size: 12px;
+			}
+
+			/* File Drop Area */
+			.file-drop-area {
+				background: var(--panel);
+				border: 1px solid var(--panel-border);
+				border-radius: 4px;
+				padding: 16px;
+				text-align: center;
+				margin-top: 8px;
+			}
+
+			.file-drop-zone {
+				position: relative;
+				min-height: 60px;
+				border: 2px dashed #cccccc;
+				border-radius: 4px;
+				background: #fafafa;
+				display: flex;
+				align-items: center;
+				justify-content: center;
+				transition: border-color 0.2s ease, background-color 0.2s ease;
+			}
+
+			.file-drop-zone.is-dragging {
+				border-color: var(--accent);
+				background: #f0f8ff;
+			}
+
+			.file-drop-text {
+				font-size: 14px;
+				color: var(--muted);
+				pointer-events: none;
+			}
+
+			.file-input-overlay {
+				position: absolute;
+				inset: 0;
+				opacity: 0;
+				cursor: pointer;
+				border: 0;
+				padding: 0;
+				margin: 0;
+				width: 100%;
+				height: 100%;
+			}
+
+			/* Form Styles */
+			.form-section {
+				background: var(--panel);
+				border: 1px solid var(--panel-border);
+				border-radius: 4px;
+				padding: 12px;
+				margin-bottom: 12px;
+			}
+
+			.form-section h3 {
+				margin: 0 0 12px 0;
+				font-size: 13px;
+				font-weight: 600;
+				color: var(--ink);
+			}
+
+			.form-grid {
 				display: grid;
-				grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+				grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
 				gap: 12px;
 			}
 
-			.form-advanced {
-				border: 1px solid var(--line);
-				border-radius: 10px;
-				background: var(--panel-strong);
-				padding: 8px 10px 10px;
-			}
-
-			.form-advanced > summary {
-				cursor: pointer;
-				font-size: 12px;
-				font-weight: 700;
-				color: var(--muted);
-				user-select: none;
-			}
-
-			.advanced-sections {
-				display: grid;
-				gap: 10px;
-				margin-top: 10px;
-			}
-
-			label {
-				display: grid;
-				gap: 6px;
-				font-size: 12px;
-				color: var(--muted);
-			}
-
-			.label-title {
-				display: inline-flex;
-				align-items: center;
+			.form-field {
+				display: flex;
+				flex-direction: column;
 				gap: 4px;
-				line-height: 1.2;
 			}
 
+			.form-field label {
+				font-size: 11px;
+				color: var(--muted);
+				font-weight: 500;
+			}
+
+			.form-field input,
+			.form-field select,
+			.form-field textarea {
+				width: 100%;
+				border: 1px solid var(--panel-border);
+				border-radius: 4px;
+				padding: 6px 8px;
+				background: var(--panel);
+				color: var(--ink);
+				font-size: 12px;
+				font-family: inherit;
+			}
+
+			.form-field textarea {
+				min-height: 80px;
+				font-family: var(--mono);
+				resize: vertical;
+			}
+
+			/* Settings Panel */
+			.settings-panel {
+				position: fixed;
+				top: 50px;
+				right: -400px;
+				width: 380px;
+				height: calc(100vh - 50px);
+				background: var(--panel);
+				border-left: 1px solid var(--panel-border);
+				box-shadow: -2px 0 8px rgba(0, 0, 0, 0.1);
+				transition: right 0.3s ease;
+				z-index: 1000;
+				overflow-y: auto;
+			}
+
+			.settings-panel.open {
+				right: 0;
+			}
+
+			.settings-header {
+				padding: 16px;
+				border-bottom: 1px solid var(--panel-border);
+				display: flex;
+				justify-content: space-between;
+				align-items: center;
+			}
+
+			.settings-content {
+				padding: 16px;
+			}
+
+			/* Utility Classes */
+			.hidden {
+				display: none;
+			}
+
+			.text-center {
+				text-align: center;
+			}
+
+			/* Help Button */
 			.help-trigger {
 				position: relative;
 				display: inline-flex;
 				align-items: center;
 				justify-content: center;
 				flex: 0 0 auto;
-				width: 14px;
-				height: 14px;
+				width: 16px;
+				height: 16px;
 				padding: 0;
 				border: 1px solid #93a3b3;
 				border-radius: 999px;
@@ -162,6 +435,7 @@
 				font-weight: 700;
 				line-height: 1;
 				cursor: pointer;
+				margin-left: 4px;
 			}
 
 			.help-trigger::before,
@@ -209,594 +483,477 @@
 				opacity: 1;
 			}
 
-			.file-dropzone {
-				position: relative;
-				min-height: 92px;
-				border: 2px dashed #8aa3b8;
+			/* Status indicators */
+			.status-tag {
+				display: inline-flex;
+				align-items: center;
+				gap: 4px;
+				font-size: 10px;
+				font-family: var(--mono);
+				border: 1px solid var(--panel-border);
 				border-radius: 12px;
-				background: #f8fbff;
-				display: grid;
-				place-items: center;
-				text-align: center;
-				padding: 10px;
-				transition: border-color 0.12s ease, background-color 0.12s ease;
-			}
-
-			.file-dropzone.is-dragging {
-				border-color: #0f766e;
-				background: #edfdf8;
-			}
-
-			.file-drop-text {
-				font-size: 12px;
-				color: #4b5563;
-				pointer-events: none;
-			}
-
-			.file-drop-text strong {
-				display: block;
-				color: #1f2937;
-				font-size: 13px;
-				margin-bottom: 4px;
-			}
-
-			.file-input-overlay {
-				position: absolute;
-				inset: 0;
-				opacity: 0;
-				cursor: pointer;
-				border: 0;
-				padding: 0;
-				margin: 0;
-				width: 100%;
-				height: 100%;
-			}
-
-			input,
-			select,
-			textarea,
-			button {
-				font: inherit;
-			}
-
-			input,
-			select,
-			textarea {
-				width: 100%;
-				border: 1px solid var(--line);
-				border-radius: 10px;
-				padding: 9px 10px;
-				background: #fff;
-				color: var(--ink);
-				font-size: 14px;
-			}
-
-			textarea {
-				resize: vertical;
-				min-height: 110px;
-				font-family: var(--mono);
-			}
-
-			.span-2 {
-				grid-column: span 2;
-			}
-
-			.actions {
-				display: flex;
-				align-items: center;
-				gap: 10px;
-				grid-column: 1 / -1;
-			}
-
-			button {
-				border: 0;
-				border-radius: 10px;
-				padding: 10px 18px;
-				background: var(--accent);
-				color: #fff;
-				font-weight: 600;
-				cursor: pointer;
-			}
-
-			button:disabled {
-				opacity: 0.6;
-				cursor: not-allowed;
-			}
-
-			.button-secondary {
-				background: #b45309;
-			}
-
-			.note {
-				font-size: 12px;
+				padding: 3px 8px;
+				background: var(--panel);
 				color: var(--muted);
 			}
 
-			.result-head {
-				padding: 14px 18px;
-				border-bottom: 1px solid var(--line);
-				display: flex;
-				flex-wrap: wrap;
-				gap: 8px;
-				align-items: center;
+			/* Responsive */
+			@media (max-width: 1024px) {
+				.sidebar {
+					width: 250px;
+				}
 			}
 
-			.button-copy {
-				margin-left: auto;
-				border: 1px solid var(--line);
-				border-radius: 999px;
-				padding: 6px 12px;
-				background: var(--panel-strong);
-				color: var(--muted);
-				font-size: 12px;
-				font-weight: 600;
-			}
-
-			.button-copy.copied {
-				background: var(--accent);
-				border-color: var(--accent);
-				color: #fff;
-			}
-
-			.page-picker {
-				padding: 12px 18px 0;
-				display: flex;
-				align-items: center;
-				gap: 10px;
-			}
-
-			.page-picker label {
-				display: block;
-				font-size: 12px;
-				color: var(--muted);
-				min-width: fit-content;
-			}
-
-			.page-picker select {
-				max-width: 240px;
-			}
-
-			.result-body {
-				padding: 14px 18px 18px;
-				display: grid;
-				gap: 12px;
-			}
-
-			.card {
-				border: 1px solid var(--line);
-				border-radius: 10px;
-				background: var(--panel-strong);
-				padding: 12px;
-			}
-
-			pre {
-				margin: 0;
-				font-family: var(--mono);
-				font-size: 12px;
-				line-height: 1.55;
-				white-space: pre-wrap;
-				word-break: break-word;
-			}
-
-			details summary {
-				cursor: pointer;
-				color: var(--warn);
-				font-size: 12px;
-				margin-bottom: 8px;
-			}
-
-			.preview-image {
-				width: 100%;
-				height: auto;
-				border: 1px solid var(--line);
-				border-radius: 8px;
-				background: #fff;
-			}
-
-			.block-table-wrap {
-				overflow-x: auto;
-			}
-
-			.block-table {
-				width: 100%;
-				border-collapse: collapse;
-				font-size: 12px;
-				font-family: var(--mono);
-			}
-
-			.block-table th,
-			.block-table td {
-				border: 1px solid var(--line);
-				padding: 6px 8px;
-				vertical-align: top;
-			}
-
-			.block-table th {
-				background: #f4f7fb;
-				font-weight: 600;
-				text-align: left;
-			}
-
-			.hidden {
-				display: none;
-			}
-
-			@media (max-width: 760px) {
-				.span-2 {
-					grid-column: span 1;
+			@media (max-width: 768px) {
+				.main-container {
+					flex-direction: column;
+				}
+				
+				.sidebar {
+					width: 100%;
+					max-height: 300px;
+				}
+				
+				.toolbar-group {
+					display: none;
+				}
+				
+				.toolbar-group.essential {
+					display: flex;
 				}
 			}
 		</style>
 	</head>
 	<body>
-		<div class="wrap">
-			<section class="panel">
-				<div class="header">
-					<h1>GLM-OCR Local Console</h1>
-					<div style="display: flex; gap: 8px; flex-wrap: wrap">
-						<span class="tag" id="statusModel">model: -</span>
-						<span class="tag" id="statusDevice">device: -</span>
-						<span class="tag" id="statusCuda">cuda: -</span>
+		<!-- Toolbar -->
+		<div class="toolbar">
+			<div class="toolbar-left">
+				<span class="toolbar-title">PS SOCR</span>
+				
+				<div class="toolbar-group">
+					<button class="toolbar-btn" id="openFileBtn">ファイルを開く</button>
+				</div>
+				
+				<div class="toolbar-group">
+					<button class="toolbar-btn">←</button>
+					<button class="toolbar-btn">→</button>
+					<button class="toolbar-btn">-</button>
+				</div>
+				
+				<div class="toolbar-group zoom-control">
+					<button class="toolbar-btn" id="zoomOut">-</button>
+					<div class="zoom-display" id="zoomLevel">100%</div>
+					<button class="toolbar-btn" id="zoomIn">+</button>
+				</div>
+				
+				<div class="toolbar-group">
+					<button class="toolbar-btn" id="fitBtn">1:1</button>
+				</div>
+				
+				<div class="toolbar-group">
+					<button class="toolbar-btn" id="settingsBtn">詳細設定</button>
+					<button class="toolbar-btn" id="clearSelectionBtn" style="display: none;">選択解除</button>
+				</div>
+			</div>
+			
+			<div class="toolbar-right">
+				<button class="toolbar-btn primary" id="executeOcrBtn">OCR実行</button>
+				<button class="toolbar-btn" id="clearBtn">クリア</button>
+			</div>
+		</div>
+
+		<!-- Main Container -->
+		<div class="main-container">
+			<!-- Content Area -->
+			<div class="content-area">
+				<!-- Viewer Panel -->
+				<div class="viewer-panel" id="viewerPanel">
+					<div class="viewer-content">
+						読み込み済みファイルをここでプレビューします
 					</div>
 				</div>
-					<form id="analyzeForm">
-						<fieldset class="form-group">
-							<legend>入力</legend>
-							<div class="group-grid">
-								<label class="span-2">
-								<span class="label-title"
-									>ファイル (画像/PDF)
+				
+				<!-- File Drop Area -->
+				<div class="file-drop-area">
+					<div class="file-drop-zone" id="fileDropzone">
+						<div class="file-drop-text" id="fileDropText">
+							ファイルを開いてください
+						</div>
+						<input
+							id="file"
+							name="file"
+							type="file"
+							class="file-input-overlay"
+							accept=".pdf,image/*"
+							required
+						/>
+					</div>
+				</div>
+			</div>
+
+			<!-- Sidebar -->
+			<div class="sidebar">
+				<div class="sidebar-header">
+					<span>OCR結果</span>
+					<div class="controls">
+						<span class="status-tag" id="statusIndicator">待機中</span>
+					</div>
+				</div>
+				
+				<div class="sidebar-content">
+					<!-- Page Selector -->
+					<div class="page-selector hidden" id="pagePickerWrap">
+						<div class="result-label">ページ</div>
+						<select id="pageSelect"></select>
+					</div>
+					
+					<!-- Text Results -->
+					<div class="result-section">
+						<div class="result-header">
+							<div class="result-label">No.</div>
+							<div class="result-label">Text</div>
+						</div>
+						<div class="result-output" id="textResult">
+							OCR実行後にここで結果を表示します
+						</div>
+					</div>
+					
+					<!-- Control Buttons -->
+					<div class="controls">
+						<button class="btn btn-primary btn-small" id="copyBtn" disabled>結果をコピー</button>
+						<button class="btn btn-secondary btn-small" id="clearResultBtn">結果クリア</button>
+					</div>
+				</div>
+			</div>
+		</div>
+
+		<!-- Settings Panel -->
+		<div class="settings-panel" id="settingsPanel">
+			<div class="settings-header">
+				<h3>詳細設定</h3>
+				<button class="btn btn-small" id="closeSettingsBtn">×</button>
+			</div>
+			
+			<div class="settings-content">
+				<form id="analyzeForm">
+					<div class="form-section">
+						<h3>基本設定</h3>
+						<div class="form-grid">
+							<div class="form-field">
+								<label>
+									task
 									<button
 										class="help-trigger"
-											type="button"
-											data-help="解析対象ファイルです。PDFはページごとに展開してOCRします。"
-											aria-label="ファイルの説明"
-										>
-											?
-										</button>
-									</span>
-									<div class="file-dropzone" id="fileDropzone">
-										<div class="file-drop-text" id="fileDropText">
-											<strong>ドラッグ&ドロップ</strong>
-											またはクリックしてファイルを選択
-										</div>
-										<input
-											id="file"
-											name="file"
-											type="file"
-											class="file-input-overlay"
-											accept=".pdf,image/*"
-											required
-										/>
-									</div>
+										type="button"
+										data-help="認識タイプを指定します。text/table/formula/extract_json から選択します。"
+										aria-label="taskの説明"
+									>
+										?
+									</button>
 								</label>
+								<select id="task" name="task">
+									<option value="text" selected>Text</option>
+									<option value="table">Table</option>
+									<option value="formula">Formula</option>
+									<option value="extract_json">JSON抽出</option>
+								</select>
+							</div>
+							
+							<div class="form-field">
 								<label>
-									<span class="label-title"
-										>task
-										<button
-											class="help-trigger"
-											type="button"
-											data-help="認識タイプを指定します。text/table/formula/extract_json から選択します。"
-											aria-label="taskの説明"
-										>
-											?
-										</button>
-									</span>
-									<select id="task" name="task">
-										<option value="text" selected>Text</option>
-										<option value="table">Table</option>
-										<option value="formula">Formula</option>
-										<option value="extract_json">JSON抽出</option>
-									</select>
+									改行処理
+									<button
+										class="help-trigger"
+										type="button"
+										data-help="OCR後の改行整形モードです。noneはそのまま、paragraphは段落維持、compactは改行を強く圧縮します。"
+										aria-label="改行処理の説明"
+									>
+										?
+									</button>
 								</label>
-								<label id="schemaWrap" class="span-2 hidden">
-									<span class="label-title"
-										>schema (JSON Schema string)
-										<button
-											class="help-trigger"
-											type="button"
-											data-help="task が extract_json のとき必須です。出力したいJSON構造をスキーマで指定します。"
-											aria-label="schemaの説明"
-										>
-											?
-										</button>
-									</span>
-									<textarea
-										id="schema"
-										name="schema"
-										placeholder='{"type":"object","properties":{"name":{"type":"string"}}}'
-									></textarea>
+								<select id="linebreak_mode" name="linebreak_mode">
+									<option value="none" selected>処理しない</option>
+									<option value="paragraph">段落整形（空行維持）</option>
+									<option value="compact">強力整形（改行ほぼ除去）</option>
+								</select>
+							</div>
+							
+							<div class="form-field">
+								<label>
+									device
+									<button
+										class="help-trigger"
+										type="button"
+										data-help="推論に使う計算デバイスです。autoはCUDA利用可ならGPU、不可ならCPUを選びます。"
+										aria-label="deviceの説明"
+									>
+										?
+									</button>
 								</label>
+								<select id="device" name="device">
+									<option value="auto" selected>auto</option>
+									<option value="cuda">cuda</option>
+									<option value="cpu">cpu</option>
+								</select>
 							</div>
-						</fieldset>
-
-						<details class="form-advanced">
-							<summary>詳細設定</summary>
-							<div class="advanced-sections">
-								<fieldset class="form-group">
-									<legend>レイアウトOCR</legend>
-									<div class="group-grid">
-										<label>
-											<span class="label-title"
-												>領域分割OCR
-												<button
-													class="help-trigger"
-													type="button"
-													data-help="ONでレイアウト解析後に領域ごとOCRします。段組み・縦書き文書の読順崩れ対策向けです。"
-													aria-label="領域分割OCRの説明"
-												>
-													?
-												</button>
-											</span>
-											<select id="use_layout" name="use_layout">
-												<option value="false" selected>OFF (従来ページOCR)</option>
-												<option value="true">ON (PP-DocLayoutV3)</option>
-											</select>
-										</label>
-										<label>
-											<span class="label-title"
-												>layout backend
-												<button
-													class="help-trigger"
-													type="button"
-													data-help="レイアウト解析器です。ppdoclayoutv3推奨。noneはページ全体を1領域として扱います。"
-													aria-label="layout backendの説明"
-												>
-													?
-												</button>
-											</span>
-											<select id="layout_backend" name="layout_backend">
-												<option value="ppdoclayoutv3" selected>ppdoclayoutv3</option>
-												<option value="none">none</option>
-											</select>
-										</label>
-										<label>
-											<span class="label-title"
-												>reading_order
-												<button
-													class="help-trigger"
-													type="button"
-													data-help="領域の結合順です。autoは自動推定、ltr_ttbは左から右、rtl_ttbは右から左、vertical_rlは縦書き右列優先です。"
-													aria-label="reading_orderの説明"
-												>
-													?
-												</button>
-											</span>
-											<select id="reading_order" name="reading_order">
-												<option value="auto" selected>auto</option>
-												<option value="ltr_ttb">ltr_ttb</option>
-												<option value="rtl_ttb">rtl_ttb</option>
-												<option value="vertical_rl">vertical_rl</option>
-											</select>
-										</label>
-										<label>
-											<span class="label-title"
-												>region_padding(px)
-												<button
-													class="help-trigger"
-													type="button"
-													data-help="各領域の外側に足す余白です。文字切れ防止に有効ですが、大きすぎると隣接領域が混ざります。"
-													aria-label="region_paddingの説明"
-												>
-													?
-												</button>
-											</span>
-											<input
-												id="region_padding"
-												name="region_padding"
-												type="number"
-												min="0"
-												max="256"
-												value="12"
-											/>
-										</label>
-										<label>
-											<span class="label-title"
-												>max_regions
-												<button
-													class="help-trigger"
-													type="button"
-													data-help="1ページで処理する領域の上限です。暴走防止用で、超過分は切り捨てます。"
-													aria-label="max_regionsの説明"
-												>
-													?
-												</button>
-											</span>
-											<input
-												id="max_regions"
-												name="max_regions"
-												type="number"
-												min="1"
-												max="1000"
-												value="200"
-											/>
-										</label>
-										<label>
-											<span class="label-title"
-												>region_parallelism
-												<button
-													class="help-trigger"
-													type="button"
-													data-help="同時に回す領域推論数です。1が安全で、上げると速くなる場合がありますがVRAM使用量は増えます。"
-													aria-label="region_parallelismの説明"
-												>
-													?
-												</button>
-											</span>
-											<input
-												id="region_parallelism"
-												name="region_parallelism"
-												type="number"
-												min="1"
-												max="8"
-												value="1"
-											/>
-										</label>
-									</div>
-								</fieldset>
-
-								<fieldset class="form-group">
-									<legend>品質</legend>
-									<div class="group-grid">
-										<label>
-											<span class="label-title"
-												>改行処理
-												<button
-													class="help-trigger"
-													type="button"
-													data-help="OCR後の改行整形モードです。noneはそのまま、paragraphは段落維持、compactは改行を強く圧縮します。"
-													aria-label="改行処理の説明"
-												>
-													?
-												</button>
-											</span>
-											<select id="linebreak_mode" name="linebreak_mode">
-												<option value="none" selected>処理しない</option>
-												<option value="paragraph">段落整形（空行維持）</option>
-												<option value="compact">強力整形（改行ほぼ除去）</option>
-											</select>
-										</label>
-										<label>
-											<span class="label-title"
-												>dpi (PDF only)
-												<button
-													class="help-trigger"
-													type="button"
-													data-help="PDFを画像化する解像度です。高いほど精細ですが処理時間とメモリ消費が増えます。"
-													aria-label="dpiの説明"
-												>
-													?
-												</button>
-											</span>
-											<input
-												id="dpi"
-												name="dpi"
-												type="number"
-												min="72"
-												max="600"
-												value="220"
-											/>
-										</label>
-										<label>
-											<span class="label-title"
-												>max_new_tokens
-												<button
-													class="help-trigger"
-													type="button"
-													data-help="1回の生成トークン上限です。大きいほど長文を返せますが遅くなります。"
-													aria-label="max_new_tokensの説明"
-												>
-													?
-												</button>
-											</span>
-											<input
-												id="max_new_tokens"
-												name="max_new_tokens"
-												type="number"
-												min="1"
-												max="32768"
-												value="1024"
-											/>
-										</label>
-										<label>
-											<span class="label-title"
-												>temperature
-												<button
-													class="help-trigger"
-													type="button"
-													data-help="生成のランダム性です。0は最も決定的、値を上げると多様になります。"
-													aria-label="temperatureの説明"
-												>
-													?
-												</button>
-											</span>
-											<input
-												id="temperature"
-												name="temperature"
-												type="number"
-												step="0.1"
-												min="0"
-												max="2"
-												value="0"
-											/>
-										</label>
-									</div>
-								</fieldset>
-
-								<fieldset class="form-group">
-									<legend>実行</legend>
-									<div class="group-grid">
-										<label>
-											<span class="label-title"
-												>device
-												<button
-													class="help-trigger"
-													type="button"
-													data-help="推論に使う計算デバイスです。autoはCUDA利用可ならGPU、不可ならCPUを選びます。"
-													aria-label="deviceの説明"
-												>
-													?
-												</button>
-											</span>
-											<select id="device" name="device">
-												<option value="auto" selected>auto</option>
-												<option value="cuda">cuda</option>
-												<option value="cpu">cpu</option>
-											</select>
-										</label>
-									</div>
-								</fieldset>
+						</div>
+						
+						<div class="form-field" id="schemaWrap" style="display: none; margin-top: 12px;">
+							<label>
+								schema (JSON Schema string)
+								<button
+									class="help-trigger"
+									type="button"
+									data-help="task が extract_json のとき必須です。出力したいJSON構造をスキーマで指定します。"
+									aria-label="schemaの説明"
+								>
+									?
+								</button>
+							</label>
+							<textarea
+								id="schema"
+								name="schema"
+								placeholder='{"type":"object","properties":{"name":{"type":"string"}}}'
+							></textarea>
+						</div>
+					</div>
+					
+					<div class="form-section">
+						<h3>レイアウトOCR</h3>
+						<div class="form-grid">
+							<div class="form-field">
+								<label>
+									領域分割OCR
+									<button
+										class="help-trigger"
+										type="button"
+										data-help="ONでレイアウト解析後に領域ごとOCRします。段組み・縦書き文書の読順崩れ対策向けです。"
+										aria-label="領域分割OCRの説明"
+									>
+										?
+									</button>
+								</label>
+								<select id="use_layout" name="use_layout">
+									<option value="false" selected>OFF (従来ページOCR)</option>
+									<option value="true">ON (PP-DocLayoutV3)</option>
+								</select>
 							</div>
-						</details>
-						<div class="actions">
-							<button id="submitBtn" type="submit">実行</button>
-							<button
-							id="cancelBtn"
-							class="button-secondary hidden"
-							type="button"
-							disabled
-						>
-							中断
-						</button>
-						<span class="note" id="requestNote">待機中</span>
+							
+							<div class="form-field">
+								<label>
+									layout backend
+									<button
+										class="help-trigger"
+										type="button"
+										data-help="レイアウト解析器です。ppdoclayoutv3推奨。noneはページ全体を1領域として扱います。"
+										aria-label="layout backendの説明"
+									>
+										?
+									</button>
+								</label>
+								<select id="layout_backend" name="layout_backend">
+									<option value="ppdoclayoutv3" selected>ppdoclayoutv3</option>
+									<option value="none">none</option>
+								</select>
+							</div>
+							
+							<div class="form-field">
+								<label>
+									reading_order
+									<button
+										class="help-trigger"
+										type="button"
+										data-help="領域の結合順です。autoは自動推定、ltr_ttbは左から右、rtl_ttbは右から左、vertical_rlは縦書き右列優先です。"
+										aria-label="reading_orderの説明"
+									>
+										?
+									</button>
+								</label>
+								<select id="reading_order" name="reading_order">
+									<option value="auto" selected>auto</option>
+									<option value="ltr_ttb">ltr_ttb</option>
+									<option value="rtl_ttb">rtl_ttb</option>
+									<option value="vertical_rl">vertical_rl</option>
+								</select>
+							</div>
+							
+							<div class="form-field">
+								<label>
+									region_padding(px)
+									<button
+										class="help-trigger"
+										type="button"
+										data-help="各領域の外側に足す余白です。文字切れ防止に有効ですが、大きすぎると隣接領域が混ざります。"
+										aria-label="region_paddingの説明"
+									>
+										?
+									</button>
+								</label>
+								<input
+									id="region_padding"
+									name="region_padding"
+									type="number"
+									min="0"
+									max="256"
+									value="12"
+								/>
+							</div>
+							
+							<div class="form-field">
+								<label>
+									max_regions
+									<button
+										class="help-trigger"
+										type="button"
+										data-help="1ページで処理する領域の上限です。暴走防止用で、超過分は切り捨てます。"
+										aria-label="max_regionsの説明"
+									>
+										?
+									</button>
+								</label>
+								<input
+									id="max_regions"
+									name="max_regions"
+									type="number"
+									min="1"
+									max="1000"
+									value="200"
+								/>
+							</div>
+							
+							<div class="form-field">
+								<label>
+									region_parallelism
+									<button
+										class="help-trigger"
+										type="button"
+										data-help="同時に回す領域推論数です。1が安全で、上げると速くなる場合がありますがVRAM使用量は増えます。"
+										aria-label="region_parallelismの説明"
+									>
+										?
+									</button>
+								</label>
+								<input
+									id="region_parallelism"
+									name="region_parallelism"
+									type="number"
+									min="1"
+									max="8"
+									value="1"
+								/>
+							</div>
+						</div>
+					</div>
+					
+					<div class="form-section">
+						<h3>品質設定</h3>
+						<div class="form-grid">
+							<div class="form-field">
+								<label>
+									dpi (PDF only)
+									<button
+										class="help-trigger"
+										type="button"
+										data-help="PDFを画像化する解像度です。高いほど精細ですが処理時間とメモリ消費が増えます。"
+										aria-label="dpiの説明"
+									>
+										?
+									</button>
+								</label>
+								<input
+									id="dpi"
+									name="dpi"
+									type="number"
+									min="72"
+									max="600"
+									value="220"
+								/>
+							</div>
+							
+							<div class="form-field">
+								<label>
+									max_new_tokens
+									<button
+										class="help-trigger"
+										type="button"
+										data-help="1回の生成トークン上限です。大きいほど長文を返せますが遅くなります。"
+										aria-label="max_new_tokensの説明"
+									>
+										?
+									</button>
+								</label>
+								<input
+									id="max_new_tokens"
+									name="max_new_tokens"
+									type="number"
+									min="1"
+									max="32768"
+									value="1024"
+								/>
+							</div>
+							
+							<div class="form-field">
+								<label>
+									temperature
+									<button
+										class="help-trigger"
+										type="button"
+										data-help="生成のランダム性です。0は最も決定的、値を上げると多様になります。"
+										aria-label="temperatureの説明"
+									>
+										?
+									</button>
+								</label>
+								<input
+									id="temperature"
+									name="temperature"
+									type="number"
+									step="0.1"
+									min="0"
+									max="2"
+									value="0"
+								/>
+							</div>
+						</div>
 					</div>
 				</form>
-			</section>
+			</div>
+		</div>
 
-				<section class="panel">
-					<div class="result-head">
-						<span class="tag" id="resultTask">task: -</span>
-						<span class="tag" id="resultLinebreak">linebreak: -</span>
-						<span class="tag" id="resultPages">pages: -</span>
-						<span class="tag" id="resultDevice">run device: -</span>
-						<span class="tag" id="resultLayout">layout: -</span>
-						<span class="tag" id="resultOrder">order: -</span>
-						<button id="copyBtn" class="button-copy" type="button" disabled>
-							コピー
-						</button>
-					</div>
-				<div class="page-picker hidden" id="pagePickerWrap">
-					<label for="pageSelect">表示ページ</label>
-					<select id="pageSelect"></select>
-				</div>
-				<div class="result-body" id="resultBody">
-					<div class="card">
-						<pre>ここに解析結果が表示されます。</pre>
-					</div>
-				</div>
-			</section>
+		<!-- Hidden elements for status -->
+		<div style="display: none">
+			<span id="statusModel">model: -</span>
+			<span id="statusDevice">device: -</span>
+			<span id="statusCuda">cuda: -</span>
+			<span id="resultTask">task: -</span>
+			<span id="resultLinebreak">linebreak: -</span>
+			<span id="resultPages">pages: -</span>
+			<span id="resultDevice">run device: -</span>
+			<span id="resultLayout">layout: -</span>
+			<span id="resultOrder">order: -</span>
+			<span id="requestNote">待機中</span>
+			<button id="submitBtn" type="submit" style="display: none;">実行</button>
+			<button id="cancelBtn" type="button" style="display: none;">中断</button>
+			<div id="resultBody"></div>
 		</div>
 
 		<script>
+			// Element references
 			const form = document.getElementById("analyzeForm");
-			const submitBtn = document.getElementById("submitBtn");
-				const cancelBtn = document.getElementById("cancelBtn");
-				const copyBtn = document.getElementById("copyBtn");
-				const requestNote = document.getElementById("requestNote");
-				const fileInput = document.getElementById("file");
-				const fileDropzone = document.getElementById("fileDropzone");
-				const fileDropText = document.getElementById("fileDropText");
-				const taskInput = document.getElementById("task");
+			const executeOcrBtn = document.getElementById("executeOcrBtn");
+			const openFileBtn = document.getElementById("openFileBtn");
+			const settingsBtn = document.getElementById("settingsBtn");
+			const closeSettingsBtn = document.getElementById("closeSettingsBtn");
+			const settingsPanel = document.getElementById("settingsPanel");
+			const clearBtn = document.getElementById("clearBtn");
+			const clearResultBtn = document.getElementById("clearResultBtn");
+			const clearSelectionBtn = document.getElementById("clearSelectionBtn");
+			const copyBtn = document.getElementById("copyBtn");
+			const statusIndicator = document.getElementById("statusIndicator");
+			const fileInput = document.getElementById("file");
+			const fileDropzone = document.getElementById("fileDropzone");
+			const fileDropText = document.getElementById("fileDropText");
+			const taskInput = document.getElementById("task");
 			const schemaWrap = document.getElementById("schemaWrap");
 			const schemaInput = document.getElementById("schema");
 			const useLayoutInput = document.getElementById("use_layout");
@@ -807,8 +964,14 @@
 			const regionParallelismInput = document.getElementById("region_parallelism");
 			const pagePickerWrap = document.getElementById("pagePickerWrap");
 			const pageSelect = document.getElementById("pageSelect");
-			const resultBody = document.getElementById("resultBody");
+			const textResult = document.getElementById("textResult");
+			const viewerPanel = document.getElementById("viewerPanel");
 
+			// Hidden elements for compatibility
+			const submitBtn = document.getElementById("submitBtn");
+			const cancelBtn = document.getElementById("cancelBtn");
+			const requestNote = document.getElementById("requestNote");
+			const resultBody = document.getElementById("resultBody");
 			const statusModel = document.getElementById("statusModel");
 			const statusDevice = document.getElementById("statusDevice");
 			const statusCuda = document.getElementById("statusCuda");
@@ -819,107 +982,206 @@
 			const resultLayout = document.getElementById("resultLayout");
 			const resultOrder = document.getElementById("resultOrder");
 
+			// State variables
 			let currentResults = [];
 			let progressPollTimer = null;
 			let activeRequestId = null;
 			let currentViewItem = null;
 			let currentViewLabel = "";
 			let copyFeedbackTimer = null;
-				let currentMeta = {
-					useLayout: false,
-					readingOrder: "auto",
-					layoutBackend: "-",
+			let currentMeta = {
+				useLayout: false,
+				readingOrder: "auto",
+				layoutBackend: "-",
+			};
+			const helpTriggers = Array.from(document.querySelectorAll(".help-trigger"));
+
+			// Selection state
+			let selectionState = {
+				isSelecting: false,
+				startX: 0,
+				startY: 0,
+				currentX: 0,
+				currentY: 0,
+				selectionRect: null,
+				canvas: null,
+				context: null,
+				image: null,
+				imageRect: null
+			};
+
+			// UI Functions
+			function showSettings() {
+				settingsPanel.classList.add('open');
+			}
+
+			function hideSettings() {
+				settingsPanel.classList.remove('open');
+			}
+
+			function updateFileDropText() {
+				if (!fileDropText) return;
+				
+				// Clear any processing overlay when new file is selected
+				clearProcessingOverlay();
+				
+				if (fileInput && fileInput.files && fileInput.files.length > 0) {
+					const fileName = fileInput.files[0].name;
+					const file = fileInput.files[0];
+					fileDropText.textContent = `選択中: ${fileName}`;
+					
+					// Update viewer panel with actual file preview
+					updateViewerPreview(file);
+					return;
+				}
+				
+				fileDropText.textContent = "ファイルを開いてください";
+				viewerPanel.innerHTML = '<div class="viewer-content">読み込み済みファイルをここでプレビューします</div>';
+			}
+
+			function updateViewerPreview(file) {
+				if (!file || !viewerPanel) return;
+
+				const fileName = file.name;
+				const fileSize = (file.size / 1024 / 1024).toFixed(2); // MB
+				const fileType = file.type;
+
+				// Check if it's an image file
+				if (fileType.startsWith('image/')) {
+					const reader = new FileReader();
+					reader.onload = function(e) {
+						// Create container with canvas overlay for selection
+						viewerPanel.innerHTML = `
+							<div class="viewer-content" style="padding: 16px; text-align: center; position: relative;">
+								<div style="position: relative; display: inline-block; max-width: 100%; max-height: 70%;">
+									<img id="previewImage" src="${e.target.result}" 
+										 style="max-width: 100%; max-height: 100%; object-fit: contain; border: 1px solid #ddd; border-radius: 4px; display: block;"
+										 alt="プレビュー画像" />
+									<canvas id="selectionCanvas" 
+										 style="position: absolute; top: 0; left: 0; cursor: crosshair; pointer-events: all;"
+										 width="0" height="0"></canvas>
+								</div>
+								<div style="font-size: 12px; color: #666; margin-top: 12px;">
+									<div><strong>${fileName}</strong></div>
+									<div>サイズ: ${fileSize} MB | タイプ: ${fileType}</div>
+									<div style="margin-top: 8px; color: #4a90e2;">ドラッグで範囲を選択してOCR実行</div>
+									<div id="selectionInfo" style="margin-top: 4px; color: #666; font-size: 11px;">範囲を選択すると座標が表示されます</div>
+								</div>
+							</div>
+						`;
+						// Setup selection after image loads
+						setupImageSelection();
+					};
+					reader.readAsDataURL(file);
+				} 
+				// PDF file
+				else if (fileType === 'application/pdf' || fileName.toLowerCase().endsWith('.pdf')) {
+					viewerPanel.innerHTML = `
+						<div class="viewer-content" style="padding: 16px; text-align: center;">
+							<div style="font-size: 48px; color: #ccc; margin-bottom: 16px;">📄</div>
+							<div style="font-size: 14px; color: #333; margin-bottom: 8px;">
+								<strong>PDF ファイル</strong>
+							</div>
+							<div style="font-size: 12px; color: #666;">
+								<div>${fileName}</div>
+								<div>サイズ: ${fileSize} MB</div>
+								<div style="margin-top: 12px; color: #4a90e2;">OCR実行でファイルを解析します</div>
+							</div>
+						</div>
+					`;
+				}
+				// Other file types
+				else {
+					viewerPanel.innerHTML = `
+						<div class="viewer-content" style="padding: 16px; text-align: center;">
+							<div style="font-size: 48px; color: #ccc; margin-bottom: 16px;">📎</div>
+							<div style="font-size: 12px; color: #666;">
+								<div><strong>${fileName}</strong></div>
+								<div>サイズ: ${fileSize} MB | タイプ: ${fileType}</div>
+								<div style="margin-top: 12px; color: #e67e22;">このファイルタイプはプレビューできません</div>
+								<div style="margin-top: 8px; color: #4a90e2;">OCR実行でファイルを解析します</div>
+							</div>
+						</div>
+					`;
+				}
+			}
+
+			function setupFileDropzone() {
+				if (!fileDropzone || !fileInput) return;
+
+				const onDragEnter = (event) => {
+					event.preventDefault();
+					fileDropzone.classList.add("is-dragging");
 				};
-				const helpTriggers = Array.from(document.querySelectorAll(".help-trigger"));
 
-				function closeHelpBubbles(except = null) {
-					helpTriggers.forEach((btn) => {
-						if (except && btn === except) {
-							return;
-						}
-						btn.classList.remove("is-open");
-						btn.setAttribute("aria-expanded", "false");
-					});
-				}
-
-				function setupHelpBubbles() {
-					helpTriggers.forEach((btn) => {
-						btn.setAttribute("aria-expanded", "false");
-						btn.addEventListener("click", (event) => {
-							event.preventDefault();
-							event.stopPropagation();
-							const isOpen = btn.classList.contains("is-open");
-							closeHelpBubbles();
-							if (!isOpen) {
-								btn.classList.add("is-open");
-								btn.setAttribute("aria-expanded", "true");
-							}
-						});
-					});
-					document.addEventListener("click", () => closeHelpBubbles());
-					document.addEventListener("keydown", (event) => {
-						if (event.key === "Escape") {
-							closeHelpBubbles();
-						}
-					});
-				}
-
-				function updateFileDropText() {
-					if (!fileDropText) {
-						return;
-					}
-					if (fileInput && fileInput.files && fileInput.files.length > 0) {
-						fileDropText.innerHTML = `<strong>選択中:</strong>${fileInput.files[0].name}`;
-						return;
-					}
-					fileDropText.innerHTML =
-						"<strong>ドラッグ&ドロップ</strong>またはクリックしてファイルを選択";
-				}
-
-				function setupFileDropzone() {
-					if (!fileDropzone || !fileInput) {
-						return;
-					}
-					const onDragEnter = (event) => {
-						event.preventDefault();
-						fileDropzone.classList.add("is-dragging");
-					};
-					const onDragLeave = (event) => {
-						event.preventDefault();
-						if (!fileDropzone.contains(event.relatedTarget)) {
-							fileDropzone.classList.remove("is-dragging");
-						}
-					};
-					const onDragOver = (event) => {
-						event.preventDefault();
-						fileDropzone.classList.add("is-dragging");
-					};
-					const onDrop = (event) => {
-						event.preventDefault();
+				const onDragLeave = (event) => {
+					event.preventDefault();
+					if (!fileDropzone.contains(event.relatedTarget)) {
 						fileDropzone.classList.remove("is-dragging");
-						const droppedFiles = event.dataTransfer && event.dataTransfer.files;
-						if (!droppedFiles || droppedFiles.length === 0) {
-							return;
-						}
-						try {
-							const transfer = new DataTransfer();
-							for (const droppedFile of droppedFiles) {
-								transfer.items.add(droppedFile);
-							}
-							fileInput.files = transfer.files;
-						} catch (error) {
-							// Ignore browsers that disallow assignment.
-						}
-						updateFileDropText();
-					};
+					}
+				};
 
-					fileDropzone.addEventListener("dragenter", onDragEnter);
-					fileDropzone.addEventListener("dragleave", onDragLeave);
-					fileDropzone.addEventListener("dragover", onDragOver);
-					fileDropzone.addEventListener("drop", onDrop);
-					fileInput.addEventListener("change", updateFileDropText);
+				const onDragOver = (event) => {
+					event.preventDefault();
+					fileDropzone.classList.add("is-dragging");
+				};
+
+				const onDrop = (event) => {
+					event.preventDefault();
+					fileDropzone.classList.remove("is-dragging");
+					const droppedFiles = event.dataTransfer && event.dataTransfer.files;
+					if (!droppedFiles || droppedFiles.length === 0) return;
+
+					try {
+						const transfer = new DataTransfer();
+						for (const droppedFile of droppedFiles) {
+							transfer.items.add(droppedFile);
+						}
+						fileInput.files = transfer.files;
+					} catch (error) {
+						// Ignore browsers that disallow assignment.
+					}
 					updateFileDropText();
-				}
+				};
+
+				fileDropzone.addEventListener("dragenter", onDragEnter);
+				fileDropzone.addEventListener("dragleave", onDragLeave);
+				fileDropzone.addEventListener("dragover", onDragOver);
+				fileDropzone.addEventListener("drop", onDrop);
+				fileInput.addEventListener("change", updateFileDropText);
+				updateFileDropText();
+			}
+
+			function closeHelpBubbles(except = null) {
+				helpTriggers.forEach((btn) => {
+					if (except && btn === except) return;
+					btn.classList.remove("is-open");
+					btn.setAttribute("aria-expanded", "false");
+				});
+			}
+
+			function setupHelpBubbles() {
+				helpTriggers.forEach((btn) => {
+					btn.setAttribute("aria-expanded", "false");
+					btn.addEventListener("click", (event) => {
+						event.preventDefault();
+						event.stopPropagation();
+						const isOpen = btn.classList.contains("is-open");
+						closeHelpBubbles();
+						if (!isOpen) {
+							btn.classList.add("is-open");
+							btn.setAttribute("aria-expanded", "true");
+						}
+					});
+				});
+
+				document.addEventListener("click", () => closeHelpBubbles());
+				document.addEventListener("keydown", (event) => {
+					if (event.key === "Escape") {
+						closeHelpBubbles();
+					}
+				});
+			}
 
 			function taskNeedsSchema(task) {
 				return task === "extract_json";
@@ -931,7 +1193,11 @@
 
 			function toggleSchema() {
 				const show = taskNeedsSchema(taskInput.value);
-				schemaWrap.classList.toggle("hidden", !show);
+				if (show) {
+					schemaWrap.style.display = "block";
+				} else {
+					schemaWrap.style.display = "none";
+				}
 				schemaInput.required = show;
 			}
 
@@ -945,11 +1211,19 @@
 			}
 
 			function setBusy(isBusy, message) {
-				submitBtn.disabled = isBusy;
+				executeOcrBtn.disabled = isBusy;
+				statusIndicator.textContent = message;
+				statusIndicator.className = isBusy ? "status-tag processing" : "status-tag";
+
+				// Update hidden elements for compatibility
+				if (submitBtn) submitBtn.disabled = isBusy;
+				if (requestNote) requestNote.textContent = message;
+				
 				const canCancel = isBusy && Boolean(activeRequestId);
-				cancelBtn.disabled = !canCancel;
-				cancelBtn.classList.toggle("hidden", !canCancel);
-				requestNote.textContent = message;
+				if (cancelBtn) {
+					cancelBtn.disabled = !canCancel;
+					cancelBtn.classList.toggle("hidden", !canCancel);
+				}
 			}
 
 			function resetCopyState() {
@@ -960,37 +1234,119 @@
 					clearTimeout(copyFeedbackTimer);
 					copyFeedbackTimer = null;
 				}
-				copyBtn.classList.remove("copied");
-				copyBtn.textContent = "コピー";
+				copyBtn.textContent = "結果をコピー";
 			}
 
 			function setError(message) {
 				resetCopyState();
-				resultBody.innerHTML = "";
-				const card = document.createElement("div");
-				card.className = "card";
-				const pre = document.createElement("pre");
-				pre.textContent = message;
-				card.appendChild(pre);
-				resultBody.appendChild(card);
+				textResult.textContent = `エラー: ${message}`;
+				// エラー後もファイルが選択されている場合はプレビューを復元
+				if (fileInput && fileInput.files && fileInput.files.length > 0) {
+					updateViewerPreview(fileInput.files[0]);
+				} else {
+					viewerPanel.innerHTML = '<div class="viewer-content">エラーが発生しました</div>';
+				}
+				
+				// Update hidden elements for compatibility
+				if (resultBody) {
+					resultBody.innerHTML = "";
+					const card = document.createElement("div");
+					card.className = "card";
+					const pre = document.createElement("pre");
+					pre.textContent = message;
+					card.appendChild(pre);
+					resultBody.appendChild(card);
+				}
 			}
 
 			function renderLoading(message = "解析中... しばらくお待ちください。") {
 				resetCopyState();
-				resultBody.innerHTML = "";
-				const card = document.createElement("div");
-				card.className = "card";
-				const pre = document.createElement("pre");
-				pre.id = "loadingText";
-				pre.textContent = message;
-				card.appendChild(pre);
-				resultBody.appendChild(card);
+				textResult.textContent = message;
+				// 処理中でもファイルプレビューは維持（処理中オーバーレイを追加）
+				if (fileInput && fileInput.files && fileInput.files.length > 0) {
+					const currentViewerContent = viewerPanel.innerHTML;
+					// プレビューがある場合は処理中オーバーレイを追加
+					if (currentViewerContent.includes('previewImage')) {
+						const overlay = document.createElement('div');
+						overlay.id = 'processingOverlay';
+						overlay.style.cssText = `
+							position: absolute;
+							top: 0;
+							left: 0;
+							width: 100%;
+							height: 100%;
+							background: rgba(255, 255, 255, 0.8);
+							display: flex;
+							align-items: center;
+							justify-content: center;
+							font-size: 14px;
+							color: #666;
+							z-index: 1000;
+						`;
+						overlay.textContent = message;
+						
+						// viewerPanelの最初の子要素（viewer-content）に relative position を設定
+						const viewerContent = viewerPanel.querySelector('.viewer-content');
+						if (viewerContent) {
+							viewerContent.style.position = 'relative';
+							// 既存のオーバーレイを削除
+							const existingOverlay = viewerContent.querySelector('#processingOverlay');
+							if (existingOverlay) {
+								existingOverlay.remove();
+							}
+							viewerContent.appendChild(overlay);
+						}
+					} else {
+						// プレビューがない場合は再表示してからオーバーレイ
+						updateViewerPreview(fileInput.files[0]);
+						setTimeout(() => {
+							renderLoading(message); // 再帰呼び出しで再試行
+						}, 100);
+					}
+				} else {
+					viewerPanel.innerHTML = '<div class="viewer-content">処理中...</div>';
+				}
+				
+				// Update hidden elements for compatibility
+				if (resultBody) {
+					resultBody.innerHTML = "";
+					const card = document.createElement("div");
+					card.className = "card";
+					const pre = document.createElement("pre");
+					pre.id = "loadingText";
+					pre.textContent = message;
+					card.appendChild(pre);
+					resultBody.appendChild(card);
+				}
 			}
 
 			function updateLoading(message) {
+				textResult.textContent = message;
 				const pre = document.getElementById("loadingText");
 				if (pre) {
 					pre.textContent = message;
+				}
+				
+				// Update processing overlay if it exists
+				const overlay = document.getElementById("processingOverlay");
+				if (overlay) {
+					overlay.textContent = message;
+				}
+			}
+
+			function clearProcessingOverlay() {
+				const overlay = document.getElementById("processingOverlay");
+				if (overlay) {
+					overlay.remove();
+				}
+				
+				// Restore file preview if file is selected
+				if (fileInput && fileInput.files && fileInput.files.length > 0) {
+					const currentViewerContent = viewerPanel.innerHTML;
+					// Only restore if current content doesn't contain preview image
+					if (!currentViewerContent.includes('previewImage')) {
+						updateViewerPreview(fileInput.files[0]);
+					}
 				}
 			}
 
@@ -1013,21 +1369,18 @@
 				const poll = async () => {
 					try {
 						const res = await fetch(`/api/progress/${encodeURIComponent(requestId)}`);
-						if (!res.ok) {
-							return;
-						}
+						if (!res.ok) return;
+
 						const payload = await res.json();
 						const message = payload.message || "解析中...";
 						setBusy(true, message);
 						updateLoading(message);
-						if (payload.total_pages && Number(payload.total_pages) > 0) {
+
+						if (payload.total_pages && Number(payload.total_pages) > 0 && resultPages) {
 							resultPages.textContent = `pages: ${payload.total_pages}`;
 						}
-						if (
-							payload.state === "done" ||
-							payload.state === "error" ||
-							payload.state === "canceled"
-						) {
+
+						if (payload.state === "done" || payload.state === "error" || payload.state === "canceled") {
 							stopProgressPolling();
 						}
 					} catch (error) {
@@ -1044,12 +1397,14 @@
 				allOption.value = "all";
 				allOption.textContent = "ALL";
 				pageSelect.appendChild(allOption);
+
 				results.forEach((item, index) => {
 					const option = document.createElement("option");
 					option.value = String(index);
 					option.textContent = `Page ${item.page}`;
 					pageSelect.appendChild(option);
 				});
+
 				pageSelect.value = "all";
 				pagePickerWrap.classList.remove("hidden");
 			}
@@ -1063,6 +1418,7 @@
 				const errors = results
 					.filter((item) => item.error)
 					.map((item) => `[Page ${item.page}] ${item.error}`);
+				
 				return {
 					text,
 					raw,
@@ -1086,88 +1442,96 @@
 				return card;
 			}
 
-				function renderBlocksTable(blocks) {
-					const wrap = document.createElement("div");
-					wrap.className = "block-table-wrap";
-					const table = document.createElement("table");
-					table.className = "block-table";
+			function renderBlocksTable(blocks) {
+				const wrap = document.createElement("div");
+				wrap.className = "block-table-wrap";
+				const table = document.createElement("table");
+				table.className = "block-table";
+				
 				const thead = document.createElement("thead");
-				thead.innerHTML =
-					"<tr><th>ID</th><th>type</th><th>bbox</th><th>truncated</th><th>text</th></tr>";
+				thead.innerHTML = "<tr><th>ID</th><th>type</th><th>bbox</th><th>truncated</th><th>text</th></tr>";
 				table.appendChild(thead);
-					const tbody = document.createElement("tbody");
-					blocks.forEach((block) => {
-						const tr = document.createElement("tr");
-						const bbox = block.bbox || {};
-						const bboxText = `(${bbox.x1 ?? "-"},${bbox.y1 ?? "-"})-(${bbox.x2 ?? "-"},${bbox.y2 ?? "-"})`;
-						const snippet = String(block.text || "").slice(0, 280);
-						const values = [
-							String(block.id || ""),
-							String(block.type || ""),
-							bboxText,
-							String(Boolean(block.truncated)),
-							snippet,
-						];
-						values.forEach((value) => {
-							const td = document.createElement("td");
-							td.textContent = value;
-							tr.appendChild(td);
-						});
-						tbody.appendChild(tr);
+				
+				const tbody = document.createElement("tbody");
+				blocks.forEach((block) => {
+					const tr = document.createElement("tr");
+					const bbox = block.bbox || {};
+					const bboxText = `(${bbox.x1 ?? "-"},${bbox.y1 ?? "-"})-(${bbox.x2 ?? "-"},${bbox.y2 ?? "-"})`;
+					const snippet = String(block.text || "").slice(0, 280);
+					const values = [
+						String(block.id || ""),
+						String(block.type || ""),
+						bboxText,
+						String(Boolean(block.truncated)),
+						snippet,
+					];
+					values.forEach((value) => {
+						const td = document.createElement("td");
+						td.textContent = value;
+						tr.appendChild(td);
 					});
-					table.appendChild(tbody);
-					wrap.appendChild(table);
-					return wrap;
+					tbody.appendChild(tr);
+				});
+				table.appendChild(tbody);
+				wrap.appendChild(table);
+				return wrap;
 			}
 
 			function renderResultItem(item, textLabel = "text", jsonLabel = "json", copyLabel = "") {
 				currentViewItem = item;
 				currentViewLabel = copyLabel;
 				copyBtn.disabled = false;
+				
 				if (copyFeedbackTimer) {
 					clearTimeout(copyFeedbackTimer);
 					copyFeedbackTimer = null;
 				}
-				copyBtn.classList.remove("copied");
-				copyBtn.textContent = "コピー";
-				resultBody.innerHTML = "";
+				copyBtn.textContent = "結果をコピー";
 
-				if (item.layout_preview_base64) {
-					const img = document.createElement("img");
-					img.className = "preview-image";
-					img.alt = "layout preview";
-					img.src = `data:image/png;base64,${item.layout_preview_base64}`;
-					resultBody.appendChild(createCard("layout_preview", img));
+				// Update main text display
+				textResult.textContent = item.text || "結果なし";
+
+				// Update hidden resultBody for compatibility
+				if (resultBody) {
+					resultBody.innerHTML = "";
+
+					if (item.layout_preview_base64) {
+						const img = document.createElement("img");
+						img.className = "preview-image";
+						img.alt = "layout preview";
+						img.src = `data:image/png;base64,${item.layout_preview_base64}`;
+						resultBody.appendChild(createCard("layout_preview", img));
+					}
+
+					if (Array.isArray(item.blocks) && item.blocks.length > 0) {
+						resultBody.appendChild(createCard("blocks", renderBlocksTable(item.blocks)));
+					}
+
+					const textPre = document.createElement("pre");
+					textPre.textContent = item.text || "";
+					resultBody.appendChild(createCard(textLabel, textPre));
+
+					if (item.json !== null && item.json !== undefined) {
+						const jsonPre = document.createElement("pre");
+						jsonPre.textContent = JSON.stringify(item.json, null, 2);
+						resultBody.appendChild(createCard(jsonLabel, jsonPre));
+					}
+
+					const rawPre = document.createElement("pre");
+					rawPre.textContent = item.raw || "";
+					const details = document.createElement("details");
+					const summary = document.createElement("summary");
+					summary.textContent = "raw (debug)";
+					details.appendChild(summary);
+					details.appendChild(rawPre);
+					const rawCard = createCard("", details);
+					if (item.error) {
+						const err = document.createElement("pre");
+						err.textContent = item.error;
+						rawCard.appendChild(err);
+					}
+					resultBody.appendChild(rawCard);
 				}
-
-				if (Array.isArray(item.blocks) && item.blocks.length > 0) {
-					resultBody.appendChild(createCard("blocks", renderBlocksTable(item.blocks)));
-				}
-
-				const textPre = document.createElement("pre");
-				textPre.textContent = item.text || "";
-				resultBody.appendChild(createCard(textLabel, textPre));
-
-				if (item.json !== null && item.json !== undefined) {
-					const jsonPre = document.createElement("pre");
-					jsonPre.textContent = JSON.stringify(item.json, null, 2);
-					resultBody.appendChild(createCard(jsonLabel, jsonPre));
-				}
-
-				const rawPre = document.createElement("pre");
-				rawPre.textContent = item.raw || "";
-				const details = document.createElement("details");
-				const summary = document.createElement("summary");
-				summary.textContent = "raw (debug)";
-				details.appendChild(summary);
-				details.appendChild(rawPre);
-				const rawCard = createCard("", details);
-				if (item.error) {
-					const err = document.createElement("pre");
-					err.textContent = item.error;
-					rawCard.appendChild(err);
-				}
-				resultBody.appendChild(rawCard);
 			}
 
 			function renderPage(index) {
@@ -1176,21 +1540,22 @@
 					setError("結果のページが見つかりません。");
 					return;
 				}
-				if (item.reading_order) {
+				if (item.reading_order && resultOrder) {
 					resultOrder.textContent = `order: ${item.reading_order}`;
 				}
 				renderResultItem(item, "text", "json", `Page ${item.page}`);
 			}
 
 			function renderAllPages() {
-				resultOrder.textContent = `order: ${currentMeta.readingOrder || "-"}`;
+				if (resultOrder) {
+					resultOrder.textContent = `order: ${currentMeta.readingOrder || "-"}`;
+				}
 				renderResultItem(combineAllPages(currentResults), "text (ALL)", "json (ALL)", "ALL");
 			}
 
 			function buildCopyText(item, label) {
-				if (!item) {
-					return "";
-				}
+				if (!item) return "";
+				
 				const parts = [];
 				if (label) {
 					parts.push(`# ${label}`);
@@ -1208,17 +1573,18 @@
 			}
 
 			function showCopyFeedback(message, copied = false) {
-				requestNote.textContent = message;
+				statusIndicator.textContent = message;
+				if (requestNote) requestNote.textContent = message;
+				
 				if (copyFeedbackTimer) {
 					clearTimeout(copyFeedbackTimer);
 					copyFeedbackTimer = null;
 				}
-				copyBtn.classList.toggle("copied", copied);
-				copyBtn.textContent = copied ? "コピー済み" : "コピー";
+				
+				copyBtn.textContent = copied ? "コピー済み" : "結果をコピー";
 				if (copied) {
 					copyFeedbackTimer = setTimeout(() => {
-						copyBtn.classList.remove("copied");
-						copyBtn.textContent = "コピー";
+						copyBtn.textContent = "結果をコピー";
 						copyFeedbackTimer = null;
 					}, 1200);
 				}
@@ -1226,9 +1592,8 @@
 
 			async function copyCurrentView() {
 				const text = buildCopyText(currentViewItem, currentViewLabel);
-				if (!text) {
-					return;
-				}
+				if (!text) return;
+
 				try {
 					await navigator.clipboard.writeText(text);
 					showCopyFeedback("コピーしました", true);
@@ -1255,9 +1620,11 @@
 				try {
 					const res = await fetch("/api/status");
 					const payload = await res.json();
-					statusModel.textContent = `model: ${payload.model || "-"}`;
-					statusDevice.textContent = `device default: ${payload.device_default || "-"}`;
-					statusCuda.textContent = `cuda: ${String(payload.cuda_available)}`;
+					
+					if (statusModel) statusModel.textContent = `model: ${payload.model || "-"}`;
+					if (statusDevice) statusDevice.textContent = `device default: ${payload.device_default || "-"}`;
+					if (statusCuda) statusCuda.textContent = `cuda: ${String(payload.cuda_available)}`;
+
 					const cudaOption = document.querySelector('#device option[value="cuda"]');
 					if (cudaOption) {
 						cudaOption.disabled = !payload.cuda_available;
@@ -1266,11 +1633,222 @@
 						}
 					}
 				} catch (error) {
-					statusCuda.textContent = "cuda: status unavailable";
+					if (statusCuda) statusCuda.textContent = "cuda: status unavailable";
 				}
 			}
 
-			form.addEventListener("submit", async (event) => {
+			function clearResults() {
+				textResult.textContent = "OCR実行後にここで結果を表示します";
+				// ファイルが選択されている場合は、プレビューを復元
+				if (fileInput && fileInput.files && fileInput.files.length > 0) {
+					updateViewerPreview(fileInput.files[0]);
+				} else {
+					viewerPanel.innerHTML = '<div class="viewer-content">読み込み済みファイルをここでプレビューします</div>';
+				}
+				pageSelect.innerHTML = "";
+				pagePickerWrap.classList.add("hidden");
+				resetCopyState();
+				currentResults = [];
+				activeRequestId = null;
+				statusIndicator.textContent = "待機中";
+			}
+
+			// Image Selection Functions
+			function setupImageSelection() {
+				requestAnimationFrame(() => {
+					const previewImage = document.getElementById('previewImage');
+					const canvas = document.getElementById('selectionCanvas');
+					
+					if (!previewImage || !canvas) return;
+					
+					previewImage.onload = function() {
+						// Get actual displayed image dimensions
+						const rect = previewImage.getBoundingClientRect();
+						canvas.width = previewImage.offsetWidth;
+						canvas.height = previewImage.offsetHeight;
+						
+						// Store references
+						selectionState.canvas = canvas;
+						selectionState.context = canvas.getContext('2d');
+						selectionState.image = previewImage;
+						selectionState.imageRect = rect;
+						
+						// Clear any previous selection
+						clearSelection();
+						
+						// Setup mouse events
+						setupSelectionEvents();
+					};
+					
+					// Trigger onload if image is already loaded
+					if (previewImage.complete && previewImage.naturalHeight > 0) {
+						previewImage.onload();
+					}
+				});
+			}
+
+			function setupSelectionEvents() {
+				const canvas = selectionState.canvas;
+				if (!canvas) return;
+
+				canvas.addEventListener('mousedown', handleSelectionStart);
+				canvas.addEventListener('mousemove', handleSelectionMove);
+				canvas.addEventListener('mouseup', handleSelectionEnd);
+				canvas.addEventListener('mouseleave', handleSelectionEnd);
+			}
+
+			function handleSelectionStart(event) {
+				if (!selectionState.canvas) return;
+				
+				const rect = selectionState.canvas.getBoundingClientRect();
+				selectionState.isSelecting = true;
+				selectionState.startX = event.clientX - rect.left;
+				selectionState.startY = event.clientY - rect.top;
+				selectionState.currentX = selectionState.startX;
+				selectionState.currentY = selectionState.startY;
+				
+				// Clear previous selection
+				clearSelection();
+			}
+
+			function handleSelectionMove(event) {
+				if (!selectionState.isSelecting || !selectionState.canvas) return;
+				
+				const rect = selectionState.canvas.getBoundingClientRect();
+				selectionState.currentX = event.clientX - rect.left;
+				selectionState.currentY = event.clientY - rect.top;
+				
+				drawSelection();
+			}
+
+			function handleSelectionEnd(event) {
+				if (!selectionState.isSelecting) return;
+				
+				selectionState.isSelecting = false;
+				
+				// Calculate final selection rectangle
+				const x1 = Math.min(selectionState.startX, selectionState.currentX);
+				const y1 = Math.min(selectionState.startY, selectionState.currentY);
+				const x2 = Math.max(selectionState.startX, selectionState.currentX);
+				const y2 = Math.max(selectionState.startY, selectionState.currentY);
+				
+				// Only create selection if it has meaningful size
+				const width = x2 - x1;
+				const height = y2 - y1;
+				
+				if (width > 5 && height > 5) {
+					selectionState.selectionRect = { x1, y1, x2, y2, width, height };
+					updateSelectionInfo();
+					drawSelection();
+				} else {
+					clearSelection();
+				}
+			}
+
+			function drawSelection() {
+				if (!selectionState.context || !selectionState.canvas) return;
+				
+				// Clear canvas
+				selectionState.context.clearRect(0, 0, selectionState.canvas.width, selectionState.canvas.height);
+				
+				if (selectionState.isSelecting) {
+					// Draw selection rectangle while dragging
+					const x1 = Math.min(selectionState.startX, selectionState.currentX);
+					const y1 = Math.min(selectionState.startY, selectionState.currentY);
+					const width = Math.abs(selectionState.currentX - selectionState.startX);
+					const height = Math.abs(selectionState.currentY - selectionState.startY);
+					
+					drawSelectionRect(x1, y1, width, height);
+				} else if (selectionState.selectionRect) {
+					// Draw final selection
+					const rect = selectionState.selectionRect;
+					drawSelectionRect(rect.x1, rect.y1, rect.width, rect.height);
+				}
+			}
+
+			function drawSelectionRect(x, y, width, height) {
+				const ctx = selectionState.context;
+				
+				// Draw selection rectangle
+				ctx.strokeStyle = '#4a90e2';
+				ctx.lineWidth = 2;
+				ctx.setLineDash([4, 4]);
+				ctx.strokeRect(x, y, width, height);
+				
+				// Draw semi-transparent overlay
+				ctx.fillStyle = 'rgba(74, 144, 226, 0.1)';
+				ctx.fillRect(x, y, width, height);
+				
+				// Draw corner handles
+				ctx.fillStyle = '#4a90e2';
+				ctx.setLineDash([]);
+				const handleSize = 6;
+				const half = handleSize / 2;
+				
+				// Corner handles
+				ctx.fillRect(x - half, y - half, handleSize, handleSize);
+				ctx.fillRect(x + width - half, y - half, handleSize, handleSize);
+				ctx.fillRect(x - half, y + height - half, handleSize, handleSize);
+				ctx.fillRect(x + width - half, y + height - half, handleSize, handleSize);
+			}
+
+			function clearSelection() {
+				if (selectionState.context && selectionState.canvas) {
+					selectionState.context.clearRect(0, 0, selectionState.canvas.width, selectionState.canvas.height);
+				}
+				selectionState.selectionRect = null;
+				updateSelectionInfo();
+				
+				// Hide clear selection button
+				if (clearSelectionBtn) {
+					clearSelectionBtn.style.display = 'none';
+				}
+			}
+
+			function updateSelectionInfo() {
+				const infoElement = document.getElementById('selectionInfo');
+				if (!infoElement) return;
+				
+				if (selectionState.selectionRect) {
+					const rect = selectionState.selectionRect;
+					const actualCoords = getActualImageCoords(rect);
+					infoElement.innerHTML = `選択範囲: ${Math.round(actualCoords.x1)}, ${Math.round(actualCoords.y1)} → ${Math.round(actualCoords.x2)}, ${Math.round(actualCoords.y2)} (${Math.round(actualCoords.width)}×${Math.round(actualCoords.height)})`;
+					infoElement.style.color = '#4a90e2';
+					
+					// Show clear selection button
+					if (clearSelectionBtn) {
+						clearSelectionBtn.style.display = 'block';
+					}
+				} else {
+					infoElement.textContent = '範囲を選択すると座標が表示されます';
+					infoElement.style.color = '#666';
+					
+					// Hide clear selection button
+					if (clearSelectionBtn) {
+						clearSelectionBtn.style.display = 'none';
+					}
+				}
+			}
+
+			function getActualImageCoords(displayRect) {
+				if (!selectionState.image) return displayRect;
+				
+				const image = selectionState.image;
+				const scaleX = image.naturalWidth / image.offsetWidth;
+				const scaleY = image.naturalHeight / image.offsetHeight;
+				
+				return {
+					x1: displayRect.x1 * scaleX,
+					y1: displayRect.y1 * scaleY,
+					x2: displayRect.x2 * scaleX,
+					y2: displayRect.y2 * scaleY,
+					width: displayRect.width * scaleX,
+					height: displayRect.height * scaleY
+				};
+			}
+
+			// Event Listeners
+			executeOcrBtn.addEventListener("click", async (event) => {
 				event.preventDefault();
 				if (!fileInput.files || fileInput.files.length === 0) {
 					setError("ファイルを選択してください。");
@@ -1280,6 +1858,7 @@
 				const formData = new FormData();
 				const requestId = createRequestId();
 				activeRequestId = requestId;
+				
 				formData.append("file", fileInput.files[0]);
 				formData.append("device", document.getElementById("device").value);
 				formData.append("dpi", document.getElementById("dpi").value);
@@ -1294,8 +1873,20 @@
 				formData.append("max_regions", maxRegionsInput.value);
 				formData.append("region_parallelism", regionParallelismInput.value);
 				formData.append("request_id", requestId);
+				
 				if (taskNeedsSchema(taskInput.value)) {
 					formData.append("schema", schemaInput.value);
+				}
+
+				// Add selection crop region if available
+				if (selectionState.selectionRect && selectionState.image) {
+					const actualCoords = getActualImageCoords(selectionState.selectionRect);
+					formData.append("crop_region", JSON.stringify({
+						x1: Math.round(actualCoords.x1),
+						y1: Math.round(actualCoords.y1),
+						x2: Math.round(actualCoords.x2),
+						y2: Math.round(actualCoords.y2)
+					}));
 				}
 
 				setBusy(true, "事前処理中");
@@ -1303,12 +1894,15 @@
 				pagePickerWrap.classList.add("hidden");
 				resetCopyState();
 				currentResults = [];
-				resultTask.textContent = `task: ${taskInput.value}`;
-				resultLinebreak.textContent = `linebreak: ${document.getElementById("linebreak_mode").value}`;
-				resultPages.textContent = "pages: -";
-				resultDevice.textContent = "run device: -";
-				resultLayout.textContent = `layout: ${useLayoutInput.value}`;
-				resultOrder.textContent = `order: ${readingOrderInput.value}`;
+				
+				// Update status tags
+				if (resultTask) resultTask.textContent = `task: ${taskInput.value}`;
+				if (resultLinebreak) resultLinebreak.textContent = `linebreak: ${document.getElementById("linebreak_mode").value}`;
+				if (resultPages) resultPages.textContent = "pages: -";
+				if (resultDevice) resultDevice.textContent = "run device: -";
+				if (resultLayout) resultLayout.textContent = `layout: ${useLayoutInput.value}`;
+				if (resultOrder) resultOrder.textContent = `order: ${readingOrderInput.value}`;
+				
 				renderLoading("事前処理中");
 				startProgressPolling(requestId);
 
@@ -1318,6 +1912,7 @@
 					if (!res.ok) {
 						throw new Error(payload.detail || "API request failed");
 					}
+					
 					stopProgressPolling();
 					activeRequestId = null;
 
@@ -1327,12 +1922,14 @@
 						readingOrder: payload.reading_order || "-",
 						layoutBackend: payload.layout_backend || "-",
 					};
-					resultTask.textContent = `task: ${payload.task || "-"}`;
-					resultLinebreak.textContent = `linebreak: ${payload.linebreak_mode || "-"}`;
-					resultPages.textContent = `pages: ${payload.page_count || 0}`;
-					resultDevice.textContent = `run device: ${payload.device || "-"}`;
-					resultLayout.textContent = `layout: ${String(Boolean(payload.use_layout))} (${payload.layout_backend || "-"})`;
-					resultOrder.textContent = `order: ${payload.reading_order || "-"}`;
+
+					// Update status tags
+					if (resultTask) resultTask.textContent = `task: ${payload.task || "-"}`;
+					if (resultLinebreak) resultLinebreak.textContent = `linebreak: ${payload.linebreak_mode || "-"}`;
+					if (resultPages) resultPages.textContent = `pages: ${payload.page_count || 0}`;
+					if (resultDevice) resultDevice.textContent = `run device: ${payload.device || "-"}`;
+					if (resultLayout) resultLayout.textContent = `layout: ${String(Boolean(payload.use_layout))} (${payload.layout_backend || "-"})`;
+					if (resultOrder) resultOrder.textContent = `order: ${payload.reading_order || "-"}`;
 
 					if (currentResults.length === 0) {
 						if (payload.state === "canceled") {
@@ -1344,43 +1941,38 @@
 						renderPageSelector(currentResults);
 						renderAllPages();
 					}
+					
 					if (payload.state === "canceled") {
 						setBusy(false, "中断");
 					} else {
 						setBusy(false, "完了");
 					}
+					
+					// Clear processing overlay and restore file preview
+					clearProcessingOverlay();
 				} catch (error) {
 					stopProgressPolling();
 					activeRequestId = null;
-					setError(`エラー: ${error.message}`);
+					setError(error.message);
 					setBusy(false, "失敗");
+					
+					// Clear processing overlay and restore file preview
+					clearProcessingOverlay();
 				}
 			});
 
-			cancelBtn.addEventListener("click", async () => {
-				if (!activeRequestId) {
-					return;
-				}
-				const requestId = activeRequestId;
-				cancelBtn.disabled = true;
-				requestNote.textContent = "中断要求中...";
-				updateLoading("中断要求中...");
-				try {
-					const res = await fetch(`/api/cancel/${encodeURIComponent(requestId)}`, {
-						method: "POST",
-					});
-					const payload = await res.json();
-					if (!res.ok) {
-						throw new Error(payload.detail || "中断要求に失敗しました");
-					}
-					requestNote.textContent = payload.message || "中断要求を受け付けました";
-					updateLoading(payload.message || "中断要求を受け付けました");
-				} catch (error) {
-					requestNote.textContent = `中断要求失敗: ${error.message}`;
-					if (activeRequestId) {
-						cancelBtn.disabled = false;
-					}
-				}
+			openFileBtn.addEventListener("click", () => {
+				fileInput.click();
+			});
+
+			settingsBtn.addEventListener("click", showSettings);
+			closeSettingsBtn.addEventListener("click", hideSettings);
+
+			clearBtn.addEventListener("click", clearResults);
+			clearResultBtn.addEventListener("click", clearResults);
+
+			copyBtn.addEventListener("click", () => {
+				void copyCurrentView();
 			});
 
 			pageSelect.addEventListener("change", () => {
@@ -1396,17 +1988,59 @@
 				renderPage(index);
 			});
 
-			copyBtn.addEventListener("click", () => {
-				void copyCurrentView();
-			});
-
 			taskInput.addEventListener("change", toggleSchema);
 			useLayoutInput.addEventListener("change", toggleLayoutOptions);
+
+			// Submit button compatibility (hidden)
+			if (form) {
+				form.addEventListener("submit", (event) => {
+					event.preventDefault();
+					executeOcrBtn.click();
+				});
+			}
+
+			// Cancel button compatibility (hidden)
+			if (cancelBtn) {
+				cancelBtn.addEventListener("click", async () => {
+					if (!activeRequestId) return;
+					
+					const requestId = activeRequestId;
+					cancelBtn.disabled = true;
+					statusIndicator.textContent = "中断要求中...";
+					updateLoading("中断要求中...");
+					
+					try {
+						const res = await fetch(`/api/cancel/${encodeURIComponent(requestId)}`, {
+							method: "POST",
+						});
+						const payload = await res.json();
+						if (!res.ok) {
+							throw new Error(payload.detail || "中断要求に失敗しました");
+						}
+						statusIndicator.textContent = payload.message || "中断要求を受け付けました";
+						updateLoading(payload.message || "中断要求を受け付けました");
+					} catch (error) {
+						statusIndicator.textContent = `中断要求失敗: ${error.message}`;
+						if (activeRequestId) {
+							cancelBtn.disabled = false;
+						}
+					}
+				});
+			}
+
+			// Initialize
 			toggleSchema();
 			toggleLayoutOptions();
 			setupHelpBubbles();
 			setupFileDropzone();
 			fetchStatus();
+
+			// Additional event listeners
+			if (clearSelectionBtn) {
+				clearSelectionBtn.addEventListener("click", () => {
+					clearSelection();
+				});
+			}
 		</script>
 	</body>
 </html>

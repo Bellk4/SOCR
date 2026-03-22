@@ -46,7 +46,8 @@ ALLOWED_LAYOUT_BACKENDS = {"ppdoclayoutv3", "none"}
 ALLOWED_READING_ORDERS = {"auto", "ltr_ttb", "rtl_ttb", "vertical_rl"}
 
 logger = logging.getLogger("glm_ocr_server")
-logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
+logging.basicConfig(level=logging.INFO,
+                    format="%(asctime)s [%(levelname)s] %(message)s")
 
 
 def patch_transformers_video_auto_none_bug() -> None:
@@ -66,7 +67,8 @@ def patch_transformers_video_auto_none_bug() -> None:
 
     video_processing_auto._glm_none_patch_applied = True
     if fixed:
-        logger.warning("Applied transformers video auto patch for %d entries", fixed)
+        logger.warning(
+            "Applied transformers video auto patch for %d entries", fixed)
 
 
 def resolve_device(device: str) -> str:
@@ -75,12 +77,14 @@ def resolve_device(device: str) -> str:
         return "cuda" if torch.cuda.is_available() else "cpu"
     if requested == "cuda":
         if not torch.cuda.is_available():
-            logger.warning("CUDA requested but unavailable. Falling back to CPU.")
+            logger.warning(
+                "CUDA requested but unavailable. Falling back to CPU.")
             return "cpu"
         return "cuda"
     if requested == "cpu":
         return requested
-    raise HTTPException(status_code=400, detail=f"Unsupported device: {device}")
+    raise HTTPException(
+        status_code=400, detail=f"Unsupported device: {device}")
 
 
 class GlmRuntime:
@@ -170,7 +174,24 @@ class GlmRuntime:
         return self.processor, self.model, self.current_device
 
 
-def load_pages(path: Path, dpi: int) -> list[Image.Image]:
+def load_pages(path: Path, dpi: int, crop_region: Optional[dict] = None) -> list[Image.Image]:
+    def apply_crop_if_needed(image: Image.Image) -> Image.Image:
+        """Apply crop to image if crop_region is specified"""
+        if crop_region is None:
+            return image
+
+        # Get image dimensions
+        img_width, img_height = image.size
+
+        # Get crop coordinates (ensure they're within bounds)
+        x1 = max(0, min(crop_region['x1'], img_width - 1))
+        y1 = max(0, min(crop_region['y1'], img_height - 1))
+        x2 = max(x1 + 1, min(crop_region['x2'], img_width))
+        y2 = max(y1 + 1, min(crop_region['y2'], img_height))
+
+        # Apply crop
+        return image.crop((x1, y1, x2, y2))
+
     suffix = path.suffix.lower()
     if suffix == ".pdf":
         try:
@@ -189,6 +210,7 @@ def load_pages(path: Path, dpi: int) -> list[Image.Image]:
                 bitmap = page.render(scale=scale)
                 try:
                     image = bitmap.to_pil().convert("RGB")
+                    image = apply_crop_if_needed(image)
                 finally:
                     if hasattr(bitmap, "close"):
                         bitmap.close()
@@ -201,7 +223,9 @@ def load_pages(path: Path, dpi: int) -> list[Image.Image]:
         return pages
 
     with Image.open(path) as image:
-        return [image.convert("RGB")]
+        converted_image = image.convert("RGB")
+        cropped_image = apply_crop_if_needed(converted_image)
+        return [cropped_image]
 
 
 def save_temp_upload(upload_name: str, content: bytes) -> Path:
@@ -396,8 +420,10 @@ def resolve_effective_reading_order(
 
     widths = [max(1, b.bbox[2] - b.bbox[0]) for b in blocks]
     heights = [max(1, b.bbox[3] - b.bbox[1]) for b in blocks]
-    tall_ratio = sum(1 for w, h in zip(widths, heights) if h > (w * 1.8)) / float(len(blocks))
-    narrow_ratio = sum(1 for w, h in zip(widths, heights) if w < (h * 0.65)) / float(len(blocks))
+    tall_ratio = sum(1 for w, h in zip(widths, heights)
+                     if h > (w * 1.8)) / float(len(blocks))
+    narrow_ratio = sum(1 for w, h in zip(widths, heights)
+                       if w < (h * 0.65)) / float(len(blocks))
 
     centers = sorted(((b.bbox[0] + b.bbox[2]) // 2) for b in blocks)
     x_diffs = [centers[i + 1] - centers[i] for i in range(len(centers) - 1)]
@@ -419,7 +445,8 @@ def sort_blocks_ltr_or_rtl(
 ) -> list[LayoutBlock]:
     if not blocks:
         return []
-    avg_h = sum(max(1, b.bbox[3] - b.bbox[1]) for b in blocks) / float(len(blocks))
+    avg_h = sum(max(1, b.bbox[3] - b.bbox[1])
+                for b in blocks) / float(len(blocks))
     row_tol = max(8.0, avg_h * 0.45)
 
     sorted_by_y = sorted(blocks, key=lambda b: (b.bbox[1], b.bbox[0]))
@@ -444,7 +471,8 @@ def sort_blocks_ltr_or_rtl(
 def sort_blocks_vertical_rl(blocks: list[LayoutBlock]) -> list[LayoutBlock]:
     if not blocks:
         return []
-    avg_w = sum(max(1, b.bbox[2] - b.bbox[0]) for b in blocks) / float(len(blocks))
+    avg_w = sum(max(1, b.bbox[2] - b.bbox[0])
+                for b in blocks) / float(len(blocks))
     col_tol = max(8.0, avg_w * 0.5)
 
     sorted_by_x = sorted(blocks, key=lambda b: b.bbox[0], reverse=True)
@@ -521,7 +549,8 @@ def build_layout_preview_base64(
         block_type = str(item.get("type") or "text")
         drawer.rectangle((x1, y1, x2, y2), outline="#2563eb", width=2)
         if block_id:
-            drawer.text((x1 + 2, y1 + 2), f"{block_id}:{block_type}", fill="#dc2626")
+            drawer.text((x1 + 2, y1 + 2),
+                        f"{block_id}:{block_type}", fill="#dc2626")
     buffer = io.BytesIO()
     preview.save(buffer, format="PNG")
     encoded = base64.b64encode(buffer.getvalue()).decode("ascii")
@@ -556,9 +585,11 @@ def glm_infer(
     ).to(model.device)
     inputs.pop("token_type_ids", None)
 
-    generation_args: dict[str, Any] = {"max_new_tokens": max(1, int(max_new_tokens))}
+    generation_args: dict[str, Any] = {
+        "max_new_tokens": max(1, int(max_new_tokens))}
     if temperature is not None and float(temperature) > 0:
-        generation_args.update({"do_sample": True, "temperature": float(temperature)})
+        generation_args.update(
+            {"do_sample": True, "temperature": float(temperature)})
     if request_id:
         generation_args["stopping_criteria"] = StoppingCriteriaList(
             [CancelStoppingCriteria(request_id)]
@@ -667,6 +698,7 @@ def request_cancel(request_id: str) -> dict[str, Any]:
         "message": "中断要求を受け付けました",
     }
 
+
 app = FastAPI(
     title="GLM-OCR Local Server",
     description="FastAPI server for local GLM-OCR inference",
@@ -747,6 +779,7 @@ async def analyze(
     region_padding: int = Form(DEFAULT_REGION_PADDING),
     max_regions: int = Form(DEFAULT_MAX_REGIONS),
     region_parallelism: int = Form(DEFAULT_REGION_PARALLELISM),
+    crop_region: Optional[str] = Form(None),
     request_id: Optional[str] = Form(None),
 ) -> dict[str, Any]:
     request_id = (request_id or "").strip() or uuid.uuid4().hex
@@ -756,7 +789,8 @@ async def analyze(
     normalized_task = (task or "text").strip().lower()
     if normalized_task not in ALLOWED_TASKS:
         set_progress(request_id, "error", f"Unsupported task: {task}", 0, 0)
-        raise HTTPException(status_code=400, detail=f"Unsupported task: {task}")
+        raise HTTPException(
+            status_code=400, detail=f"Unsupported task: {task}")
     normalized_linebreak_mode = (linebreak_mode or "none").strip().lower()
     if normalized_linebreak_mode not in ALLOWED_LINEBREAK_MODES:
         set_progress(
@@ -769,7 +803,8 @@ async def analyze(
         raise HTTPException(
             status_code=400, detail=f"Unsupported linebreak_mode: {linebreak_mode}"
         )
-    normalized_layout_backend = (layout_backend or DEFAULT_LAYOUT_BACKEND).strip().lower()
+    normalized_layout_backend = (
+        layout_backend or DEFAULT_LAYOUT_BACKEND).strip().lower()
     if normalized_layout_backend not in ALLOWED_LAYOUT_BACKENDS:
         set_progress(
             request_id,
@@ -782,7 +817,8 @@ async def analyze(
             status_code=400,
             detail=f"Unsupported layout_backend: {layout_backend}",
         )
-    normalized_reading_order = (reading_order or DEFAULT_READING_ORDER).strip().lower()
+    normalized_reading_order = (
+        reading_order or DEFAULT_READING_ORDER).strip().lower()
     if normalized_reading_order not in ALLOWED_READING_ORDERS:
         set_progress(
             request_id,
@@ -797,14 +833,56 @@ async def analyze(
         )
 
     normalized_dpi = max(36, min(600, int(dpi or DEFAULT_DPI)))
-    normalized_max_new_tokens = max(1, min(32768, int(max_new_tokens or DEFAULT_MAX_NEW_TOKENS)))
-    normalized_region_padding = max(0, min(256, int(region_padding or DEFAULT_REGION_PADDING)))
-    normalized_max_regions = max(1, min(1000, int(max_regions or DEFAULT_MAX_REGIONS)))
+    normalized_max_new_tokens = max(
+        1, min(32768, int(max_new_tokens or DEFAULT_MAX_NEW_TOKENS)))
+    normalized_region_padding = max(
+        0, min(256, int(region_padding or DEFAULT_REGION_PADDING)))
+    normalized_max_regions = max(
+        1, min(1000, int(max_regions or DEFAULT_MAX_REGIONS)))
     normalized_region_parallelism = max(
         1,
         min(8, int(region_parallelism or DEFAULT_REGION_PARALLELISM)),
     )
     use_layout_mode = bool(use_layout)
+
+    # Parse crop region if provided
+    parsed_crop_region = None
+    if crop_region and crop_region.strip():
+        try:
+            crop_data = json.loads(crop_region.strip())
+            # Validate crop region format
+            if not isinstance(crop_data, dict):
+                raise ValueError("crop_region must be a JSON object")
+
+            required_keys = {'x1', 'y1', 'x2', 'y2'}
+            if not all(key in crop_data for key in required_keys):
+                raise ValueError(
+                    "crop_region must contain x1, y1, x2, y2 coordinates")
+
+            # Convert to integers and validate
+            parsed_crop_region = {
+                'x1': int(crop_data['x1']),
+                'y1': int(crop_data['y1']),
+                'x2': int(crop_data['x2']),
+                'y2': int(crop_data['y2'])
+            }
+
+            # Basic sanity check
+            if (parsed_crop_region['x1'] >= parsed_crop_region['x2'] or
+                    parsed_crop_region['y1'] >= parsed_crop_region['y2']):
+                raise ValueError(
+                    "Invalid crop region: x1 must be < x2 and y1 must be < y2")
+
+        except json.JSONDecodeError as e:
+            set_progress(request_id, "error",
+                         f"Invalid JSON in crop_region: {e}", 0, 0)
+            raise HTTPException(
+                status_code=400, detail=f"Invalid JSON in crop_region: {e}")
+        except (ValueError, KeyError) as e:
+            set_progress(request_id, "error",
+                         f"Invalid crop_region format: {e}", 0, 0)
+            raise HTTPException(
+                status_code=400, detail=f"Invalid crop_region format: {e}")
 
     try:
         prompt = build_prompt(normalized_task, schema)
@@ -823,7 +901,7 @@ async def analyze(
     try:
         content = await file.read()
         input_path = save_temp_upload(file.filename or "upload.bin", content)
-        pages = load_pages(input_path, normalized_dpi)
+        pages = load_pages(input_path, normalized_dpi, parsed_crop_region)
     except HTTPException:
         clear_cancel_request(request_id)
         raise
@@ -957,21 +1035,26 @@ async def analyze(
             padded_blocks = [
                 LayoutBlock(
                     type=normalize_layout_label(block.type),
-                    bbox=clamp_bbox_with_padding(block.bbox, page, normalized_region_padding),
+                    bbox=clamp_bbox_with_padding(
+                        block.bbox, page, normalized_region_padding),
                     score=float(block.score),
                 )
                 for block in raw_layout_blocks
             ]
             if not padded_blocks:
                 width, height = page.size
-                padded_blocks = [LayoutBlock(type="text", bbox=(0, 0, width, height), score=1.0)]
+                padded_blocks = [LayoutBlock(
+                    type="text", bbox=(0, 0, width, height), score=1.0)]
 
-            effective_order = resolve_effective_reading_order(padded_blocks, normalized_reading_order)
-            ordered_blocks = sort_layout_blocks(padded_blocks, effective_order)[:normalized_max_regions]
+            effective_order = resolve_effective_reading_order(
+                padded_blocks, normalized_reading_order)
+            ordered_blocks = sort_layout_blocks(padded_blocks, effective_order)[
+                :normalized_max_regions]
             total_regions_for_page = len(ordered_blocks)
             if total_regions_for_page == 0:
                 width, height = page.size
-                ordered_blocks = [LayoutBlock(type="text", bbox=(0, 0, width, height), score=1.0)]
+                ordered_blocks = [LayoutBlock(
+                    type="text", bbox=(0, 0, width, height), score=1.0)]
                 total_regions_for_page = 1
 
             set_progress(
@@ -1038,7 +1121,8 @@ async def analyze(
                     crop_path.unlink(missing_ok=True)
                 return region_index, item
 
-            block_results: list[Optional[dict[str, Any]]] = [None] * total_regions_for_page
+            block_results: list[Optional[dict[str, Any]]] = [
+                None] * total_regions_for_page
             completed_regions = 0
             for start in range(0, total_regions_for_page, normalized_region_parallelism):
                 if is_cancel_requested(request_id):
@@ -1048,7 +1132,8 @@ async def analyze(
                         completed_regions,
                         total_regions_for_page,
                     )
-                batch = ordered_blocks[start : start + normalized_region_parallelism]
+                batch = ordered_blocks[start: start +
+                                       normalized_region_parallelism]
                 batch_jobs = [
                     infer_region(start + offset, block) for offset, block in enumerate(batch)
                 ]
@@ -1102,7 +1187,8 @@ async def analyze(
                     page_item["json"] = json.loads(combined_text)
                 except json.JSONDecodeError as exc:
                     page_item["error"] = (
-                        f"{page_item.get('error', '')}\nJSON parse failed: {exc.msg}".strip()
+                        f"{page_item.get('error', '')}\nJSON parse failed: {exc.msg}".strip(
+                        )
                     )
             results.append(page_item)
     except HTTPException:
