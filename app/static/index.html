@@ -235,6 +235,12 @@
 				margin-bottom: 8px;
 			}
 
+			.viewer-panel.drag-over {
+				outline: 2px dashed #4a90e2;
+				outline-offset: -6px;
+				background: #6f6f6f;
+			}
+
 			.viewer-content {
 				color: #ffffff;
 				opacity: 0.7;
@@ -1387,48 +1393,70 @@
 
 			function setupFileDropzone() {
 				if (!fileInput) return;
+				const dropTarget = fileDropzone || viewerPanel;
+
+				const setDragVisual = (active) => {
+					if (fileDropzone) {
+						fileDropzone.classList.toggle("is-dragging", active);
+					}
+					if (viewerPanel && !fileDropzone) {
+						viewerPanel.classList.toggle("drag-over", active);
+					}
+				};
+
+				const applyDroppedFiles = (droppedFiles) => {
+					if (!droppedFiles || droppedFiles.length === 0) return;
+					try {
+						const transfer = new DataTransfer();
+						transfer.items.add(droppedFiles[0]);
+						fileInput.files = transfer.files;
+					} catch (error) {
+						return;
+					}
+					updateFileDropText();
+				};
 
 				const onDragEnter = (event) => {
 					event.preventDefault();
-					fileDropzone.classList.add("is-dragging");
+					setDragVisual(true);
 				};
 
 				const onDragLeave = (event) => {
 					event.preventDefault();
-					if (!fileDropzone.contains(event.relatedTarget)) {
-						fileDropzone.classList.remove("is-dragging");
+					if (dropTarget && !dropTarget.contains(event.relatedTarget)) {
+						setDragVisual(false);
 					}
 				};
 
 				const onDragOver = (event) => {
 					event.preventDefault();
-					fileDropzone.classList.add("is-dragging");
+					setDragVisual(true);
 				};
 
 				const onDrop = (event) => {
 					event.preventDefault();
-					fileDropzone.classList.remove("is-dragging");
+					setDragVisual(false);
 					const droppedFiles = event.dataTransfer && event.dataTransfer.files;
-					if (!droppedFiles || droppedFiles.length === 0) return;
-
-					try {
-						const transfer = new DataTransfer();
-						for (const droppedFile of droppedFiles) {
-							transfer.items.add(droppedFile);
-						}
-						fileInput.files = transfer.files;
-					} catch (error) {
-						// Ignore browsers that disallow assignment.
-					}
-					updateFileDropText();
+					applyDroppedFiles(droppedFiles);
 				};
 
-				if (fileDropzone) {
-					fileDropzone.addEventListener("dragenter", onDragEnter);
-					fileDropzone.addEventListener("dragleave", onDragLeave);
-					fileDropzone.addEventListener("dragover", onDragOver);
-					fileDropzone.addEventListener("drop", onDrop);
+				if (dropTarget) {
+					dropTarget.addEventListener("dragenter", onDragEnter);
+					dropTarget.addEventListener("dragleave", onDragLeave);
+					dropTarget.addEventListener("dragover", onDragOver);
+					dropTarget.addEventListener("drop", onDrop);
 				}
+
+				document.addEventListener("dragover", (event) => {
+					event.preventDefault();
+				});
+				document.addEventListener("drop", (event) => {
+					if (!dropTarget || !dropTarget.contains(event.target)) {
+						event.preventDefault();
+						setDragVisual(false);
+					}
+				});
+
 				fileInput.addEventListener("change", updateFileDropText);
 				updateFileDropText();
 			}
