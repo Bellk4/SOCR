@@ -14,6 +14,8 @@ set "VENV_DIR=%SCRIPT_DIR%\.venv"
 set "MODEL_CACHE_DIR=%SCRIPT_DIR%\models\hf_cache"
 set "ENV_FILE=%SCRIPT_DIR%\.env"
 
+cd /d "%SCRIPT_DIR%"
+
 if exist "%ENV_FILE%" (
     echo [+] Loading .env from "%ENV_FILE%"
     for /f "usebackq eol=# tokens=1* delims==" %%A in ("%ENV_FILE%") do (
@@ -80,6 +82,6 @@ if "%HOST%"=="" set "HOST=0.0.0.0"
 if "%PORT%"=="" set "PORT=8000"
 
 echo [+] Starting server at http://%HOST%:%PORT%
-uvicorn app.main:app --host "%HOST%" --port "%PORT%"
+python -m uvicorn --app-dir "%SCRIPT_DIR%" app.main:app --host "%HOST%" --port "%PORT%"
 
 endlocal

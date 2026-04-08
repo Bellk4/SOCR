@@ -14,6 +14,8 @@ MODEL_CACHE_DIR="$SCRIPT_DIR/models/hf_cache"
 HF_HOME_DIR="$SCRIPT_DIR/models/hf_home"
 ENV_FILE="$SCRIPT_DIR/.env"
 
+cd "$SCRIPT_DIR"
+
 if command -v python3 >/dev/null 2>&1; then
   PYTHON_BIN="python3"
 elif command -v python >/dev/null 2>&1; then
@@ -90,4 +92,4 @@ HOST="${HOST:-0.0.0.0}"
 PORT="${PORT:-8000}"
 
 echo "[+] Starting server at http://$HOST:$PORT"
-exec uvicorn app.main:app --host "$HOST" --port "$PORT"
+exec python -m uvicorn --app-dir "$SCRIPT_DIR" app.main:app --host "$HOST" --port "$PORT"

@@ -59,6 +59,9 @@ TORCH_CHANNEL=cu126
 - `HOST`: バインドアドレス（既定 `0.0.0.0`）
 - `PORT`: 起動ポート（既定 `8000`）
 - `TORCH_CHANNEL`: PyTorch配布チャネル（例 `cu126`, `cpu`）
+- `AUTH0_DOMAIN`, `AUTH0_CLIENT_ID`, `AUTH0_CLIENT_SECRET`, `AUTH0_SECRET`, `AUTH0_REDIRECT_URI`: Auth0 ログイン設定
+
+> OAuth 設定も含めて、環境変数は **プロジェクトルートの `.env` に一本化**してください。
 
 ## モデル保存先
 

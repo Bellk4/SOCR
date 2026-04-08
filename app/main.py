@@ -12,9 +12,9 @@ from pathlib import Path
 from typing import Any, Optional, cast
 
 import torch
-from fastapi import FastAPI, File, Form, HTTPException, UploadFile
+from fastapi import FastAPI, File, Form, HTTPException, Request, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from PIL import Image, ImageDraw
 from transformers import (
@@ -25,6 +25,12 @@ from transformers import (
 )
 
 from .layout_ppdoclayoutv3 import LayoutBlock, detect_layout_blocks
+from .oauth_integration import (
+    OAUTH_BASE_PATH,
+    has_local_oauth_session,
+    is_oauth_public_path,
+    register_oauth_routes,
+)
 
 MODEL_ID = "zai-org/GLM-OCR"
 ROOT_DIR = Path(__file__).resolve().parents[1]
@@ -704,8 +710,15 @@ class CancelStoppingCriteria(StoppingCriteria):
         input_ids: torch.LongTensor,
         scores: torch.FloatTensor,
         **kwargs: Any,
-    ) -> bool:
-        return is_cancel_requested(self.request_id)
+    ) -> torch.BoolTensor:
+        return cast(
+            torch.BoolTensor,
+            torch.tensor(
+                [is_cancel_requested(self.request_id)],
+                device=input_ids.device,
+                dtype=torch.bool,
+            ),
+        )
 
 
 # 中断要求フラグをクリアする。
@@ -765,8 +778,46 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+OAUTH_CLIENT = register_oauth_routes(app, ROOT_DIR, logger)
+
 static_dir = Path(__file__).parent / "static"
 app.mount("/static", StaticFiles(directory=static_dir), name="static")
+
+
+async def get_authenticated_user(request: Request) -> Optional[dict[str, Any]]:
+    if OAUTH_CLIENT is None or not has_local_oauth_session(request):
+        return None
+    try:
+        user = await OAUTH_CLIENT.get_user({"request": request})
+    except Exception as exc:
+        logger.warning("OAuthユーザー取得に失敗しました: %s", exc)
+        return None
+    return cast(Optional[dict[str, Any]], user)
+
+
+@app.middleware("http")
+async def require_login_for_app(request: Request, call_next):
+    if OAUTH_CLIENT is None or request.method == "OPTIONS":
+        return await call_next(request)
+
+    path = request.url.path or "/"
+    if is_oauth_public_path(path):
+        return await call_next(request)
+
+    user = await get_authenticated_user(request)
+    if user:
+        return await call_next(request)
+
+    if path.startswith("/api/"):
+        return JSONResponse(
+            status_code=401,
+            content={
+                "detail": "ログインが必要です",
+                "oauth_login_url": f"{OAUTH_BASE_PATH}/login",
+            },
+        )
+
+    return RedirectResponse(url=f"{OAUTH_BASE_PATH}/login", status_code=307)
 
 
 @app.on_event("startup")
@@ -802,6 +853,8 @@ async def status() -> dict[str, Any]:
         "device_default": "cuda" if torch.cuda.is_available() else "cpu",
         "model": MODEL_ID,
         "model_cache_dir": str(MODEL_CACHE_DIR),
+        "oauth_enabled": OAUTH_CLIENT is not None,
+        "oauth_base_path": OAUTH_BASE_PATH if OAUTH_CLIENT is not None else None,
     }
 
 
@@ -958,6 +1011,7 @@ async def analyze(
         set_progress(request_id, "error", str(exc), 0, 0)
         raise
 
+    input_path: Optional[Path] = None
     try:
         content = await file.read()
         input_path = save_temp_upload(file.filename or "upload.bin", content)
@@ -972,8 +1026,8 @@ async def analyze(
         set_progress(request_id, "error", f"事前処理エラー: {exc}", 0, 0)
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     finally:
-        if "input_path" in locals():
-            Path(input_path).unlink(missing_ok=True)
+        if input_path is not None:
+            input_path.unlink(missing_ok=True)
 
     total_pages = len(page_tuples)
     pages = [img for _, img in page_tuples]

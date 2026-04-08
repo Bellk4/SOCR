@@ -4,6 +4,8 @@
 		<meta charset="UTF-8" />
 		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
 		<title>PS SOCR - OCR Application</title>
+		<link rel="icon" type="image/png" href="/static/pdpc-logo.png" />
+		<link rel="shortcut icon" type="image/png" href="/static/pdpc-logo.png" />
 		<link rel="preconnect" href="https://fonts.googleapis.com" />
 		<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 		<link
@@ -1104,6 +1106,8 @@
 						</div>
 					</div>
 					
+
+
 					<div class="form-section">
 						<h3>品質設定</h3>
 						<div class="form-grid">
@@ -1178,6 +1182,14 @@
 							</div>
 						</div>
 					</div>
+
+					<div class="form-section hidden" id="accountSection">
+						<h3>アカウント</h3>
+						<div class="controls">
+							<button type="button" class="btn btn-secondary" id="logoutBtn">ログアウト</button>
+						</div>
+					</div>
+					
 				</form>
 			</div>
 		</div>
@@ -1208,6 +1220,8 @@
 			const closeSettingsBtn = document.getElementById("closeSettingsBtn");
 			const settingsPanel = document.getElementById("settingsPanel");
 			const clearBtn = document.getElementById("clearBtn");
+			const logoutBtn = document.getElementById("logoutBtn");
+			const accountSection = document.getElementById("accountSection");
 			const clearResultBtn = document.getElementById("clearResultBtn");
 			const clearSelectionBtn = document.getElementById("clearSelectionBtn");
 			const pageThumbWrap = document.getElementById("pageThumbWrap");
@@ -1314,6 +1328,14 @@
 			function hideSettings() {
 				settingsPanel.classList.remove('open');
 			}
+
+			document.addEventListener("click", (event) => {
+				if (!settingsPanel || !settingsPanel.classList.contains("open")) return;
+				const target = event.target;
+				if (!(target instanceof Node)) return;
+				if (settingsPanel.contains(target) || settingsBtn.contains(target)) return;
+				hideSettings();
+			});
 
 			function updateFileDropText() {
 				// Clear any processing overlay when new file is selected
@@ -1963,6 +1985,16 @@
 					if (statusModel) statusModel.textContent = `model: ${payload.model || "-"}`;
 					if (statusDevice) statusDevice.textContent = `device default: ${payload.device_default || "-"}`;
 					if (statusCuda) statusCuda.textContent = `cuda: ${String(payload.cuda_available)}`;
+					if (logoutBtn) {
+						if (payload.oauth_enabled) {
+							if (accountSection) accountSection.classList.remove("hidden");
+							logoutBtn.onclick = () => {
+								window.location.href = `${payload.oauth_base_path || "/oauth"}/logout`;
+							};
+						} else {
+							if (accountSection) accountSection.classList.add("hidden");
+						}
+					}
 
 					const cudaOption = document.querySelector('#device option[value="cuda"]');
 					if (cudaOption) {
@@ -1973,6 +2005,7 @@
 					}
 				} catch (error) {
 					if (statusCuda) statusCuda.textContent = "cuda: status unavailable";
+					if (accountSection) accountSection.classList.add("hidden");
 				}
 			}
 
