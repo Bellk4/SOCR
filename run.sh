@@ -47,14 +47,15 @@ fi
 # shellcheck disable=SC1091
 source "$VENV_DIR/bin/activate"
 
-TORCH_CHANNEL="${TORCH_CHANNEL:-}"
-if [[ -z "$TORCH_CHANNEL" ]]; then
-  if command -v nvidia-smi >/dev/null 2>&1; then
-    TORCH_CHANNEL="cu126"
-  else
-    TORCH_CHANNEL="cpu"
-  fi
-fi
+ if [[ -z "$TORCH_CHANNEL" ]]; then
+   if command -v nvidia-smi >/dev/null 2>&1; then
+     TORCH_CHANNEL="cu126"
+   elif command -v rocm-smi >/dev/null 2>&1; then
+     TORCH_CHANNEL="rocm7.2"
+   else
+     TORCH_CHANNEL="cpu"
+   fi
+ fi
 
 echo "[+] Installing/ensuring dependencies..."
 python -m pip install --upgrade pip
